@@ -54,20 +54,6 @@ export class AuthService {
     const openid = await this.getOpenIdFromCode(code);
     console.log('获取到 openid:', openid);
 
-    // 检查是否是第一个用户（自动设为主机）
-    const { data: existingUsers, error: countError } = await client
-      .from('users')
-      .select('id')
-      .limit(1);
-
-    if (countError) {
-      console.error('查询用户数量失败:', countError);
-      throw new Error('登录失败');
-    }
-
-    const isFirstUser = !existingUsers || existingUsers.length === 0;
-    console.log('是否第一个用户:', isFirstUser);
-
     // 查找或创建用户
     const { data: existingUser, error: findError } = await client
       .from('users')
@@ -101,15 +87,15 @@ export class AuthService {
       user = updatedUser;
       console.log('更新用户成功:', user);
     } else {
-      // 创建新用户
+      // 创建新用户，直接批准
       const { data: newUser, error: createError } = await client
         .from('users')
         .insert({
           openid,
           nickname: nickname || '用户',
           avatar: avatar || '',
-          is_host: isFirstUser,
-          is_approved: isFirstUser, // 第一个用户自动批准
+          is_host: false,
+          is_approved: true, // 直接批准，无需审批
         })
         .select()
         .single();
@@ -150,70 +136,6 @@ export class AuthService {
     return {
       code: 200,
       msg: '获取成功',
-      data,
-    };
-  }
-
-  async getUsers() {
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('获取用户列表失败:', error);
-      throw new Error('获取用户列表失败');
-    }
-
-    return {
-      code: 200,
-      msg: '获取成功',
-      data,
-    };
-  }
-
-  async approveUser(userId: string) {
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
-      .from('users')
-      .update({ is_approved: true, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('审批用户失败:', error);
-      throw new Error('审批失败');
-    }
-
-    return {
-      code: 200,
-      msg: '审批成功',
-      data,
-    };
-  }
-
-  async setHost(userId: string) {
-    const client = getSupabaseClient();
-
-    const { data, error } = await client
-      .from('users')
-      .update({ is_host: true, updated_at: new Date().toISOString() })
-      .eq('id', userId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('设置主机失败:', error);
-      throw new Error('设置失败');
-    }
-
-    return {
-      code: 200,
-      msg: '设置成功',
       data,
     };
   }

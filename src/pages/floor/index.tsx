@@ -25,7 +25,7 @@ const FloorPage = () => {
 
   const checkAuth = () => {
     const userInfo = Taro.getStorageSync('userInfo')
-    if (!userInfo || (!userInfo.isHost && !userInfo.isApproved)) {
+    if (!userInfo) {
       Taro.redirectTo({ url: '/pages/login/index' })
     }
   }
