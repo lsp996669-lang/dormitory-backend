@@ -65,7 +65,23 @@ const CheckInPage = () => {
       console.log('床位数据响应:', res.data)
 
       if (res.data?.code === 200 && res.data?.data) {
-        setBeds(res.data.data)
+        // 转换字段名：蛇形命名 -> 驼峰命名
+        const formattedBeds = res.data.data.map((bed: any) => ({
+          id: bed.id,
+          floor: bed.floor,
+          bedNumber: bed.bed_number,
+          position: bed.position,
+          status: bed.status,
+          checkIn: bed.checkIn ? {
+            id: bed.checkIn.id,
+            name: bed.checkIn.name,
+            idCard: bed.checkIn.id_card,
+            phone: bed.checkIn.phone,
+            checkInTime: bed.checkIn.check_in_time
+          } : undefined
+        }))
+        console.log('格式化后的床位数据:', formattedBeds)
+        setBeds(formattedBeds)
       } else {
         // 如果后端未返回数据，生成默认床位
         const defaultBeds: BedInfo[] = []

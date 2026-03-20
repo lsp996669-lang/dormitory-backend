@@ -104,7 +104,7 @@ export class BedsService implements OnModuleInit {
     // 获取该楼层所有入住记录
     const { data: checkIns, error: checkInError } = await client
       .from('check_ins')
-      .select('id, bed_id, name, check_in_time')
+      .select('id, bed_id, name, id_card, phone, check_in_time')
       .in('bed_id', beds?.map(b => b.id) || []);
 
     if (checkInError) {
