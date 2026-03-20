@@ -5,6 +5,7 @@ export default defineAppConfig({
     'pages/checkin/index',
     'pages/checkout/index',
     'pages/detail/index',
+    'pages/qrcode/index',
   ],
   window: {
     backgroundTextStyle: 'light',
@@ -29,6 +30,12 @@ export default defineAppConfig({
         text: '搬离',
         iconPath: './assets/tabbar/log-out.png',
         selectedIconPath: './assets/tabbar/log-out-active.png',
+      },
+      {
+        pagePath: 'pages/qrcode/index',
+        text: '二维码',
+        iconPath: './assets/tabbar/qr-code.png',
+        selectedIconPath: './assets/tabbar/qr-code-active.png',
       },
     ]
   }
