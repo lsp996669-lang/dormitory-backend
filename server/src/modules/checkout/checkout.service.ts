@@ -120,4 +120,26 @@ export class CheckOutService {
       data: records,
     };
   }
+
+  async deleteCheckOut(id: number) {
+    const client = getSupabaseClient();
+
+    // 删除搬离记录
+    const { error } = await client
+      .from('check_outs')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('删除搬离记录失败:', error);
+      throw new Error('删除失败');
+    }
+
+    console.log('删除搬离记录成功:', id);
+    return {
+      code: 200,
+      msg: '删除成功',
+      data: null,
+    };
+  }
 }

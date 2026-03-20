@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Delete, Param } from '@nestjs/common';
 import { CheckOutService } from './checkout.service';
 
 @Controller('checkout')
@@ -15,5 +15,11 @@ export class CheckOutController {
   async getCheckOutList() {
     console.log('获取搬离记录列表请求');
     return await this.checkOutService.getCheckOutList();
+  }
+
+  @Delete(':id')
+  async deleteCheckOut(@Param('id') id: string) {
+    console.log('删除搬离记录请求:', id);
+    return await this.checkOutService.deleteCheckOut(parseInt(id, 10));
   }
 }

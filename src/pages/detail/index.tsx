@@ -10,15 +10,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { User, Phone, CreditCard, Calendar, LogOut, Bed } from 'lucide-react-taro'
+import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2 } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
 const DetailPage = () => {
   const router = useRouter()
-  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId } = router.params
+  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId } = router.params
   const [submitting, setSubmitting] = useState(false)
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [checkOutDate, setCheckOutDate] = useState(() => {
     const today = new Date()
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -43,7 +44,10 @@ const DetailPage = () => {
   const decodedName = name ? decodeURIComponent(name) : '-'
   const decodedIdCard = idCard ? decodeURIComponent(idCard) : '-'
   const decodedPhone = phone ? decodeURIComponent(phone) : '-'
+  const decodedFloor = floor ? decodeURIComponent(floor as string) : '-'
+  const decodedBedNumber = bedNumber ? decodeURIComponent(bedNumber as string) : '-'
   const hasCheckOut = checkOutTime && checkOutTime !== 'undefined'
+  const hasCheckOutId = checkOutId && checkOutId !== 'undefined'
 
   const handleCheckOut = async () => {
     if (!checkInId || !bedId) {
@@ -87,6 +91,38 @@ const DetailPage = () => {
     }
   }
 
+  const handleDelete = async () => {
+    if (!checkOutId) {
+      Taro.showToast({ title: '缺少必要参数', icon: 'none' })
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await Network.request({
+        url: `/api/checkout/${checkOutId}`,
+        method: 'DELETE'
+      })
+
+      console.log('删除记录响应:', res.data)
+
+      if (res.data?.code === 200) {
+        Taro.showToast({ title: '删除成功', icon: 'success' })
+        setShowDeleteDialog(false)
+        setTimeout(() => {
+          Taro.navigateBack()
+        }, 1500)
+      } else {
+        Taro.showToast({ title: res.data?.msg || '删除失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('删除记录失败:', error)
+      Taro.showToast({ title: '删除失败，请重试', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <View className="min-h-screen bg-gray-50 p-4">
       <Card className="overflow-hidden">
@@ -108,7 +144,7 @@ const DetailPage = () => {
               <View>
                 <Text className="text-xs text-gray-500 block">床位信息</Text>
                 <Text className="text-sm text-gray-800">
-                  {floor ? decodeURIComponent(floor as string) : '-'}楼 {bedNumber ? decodeURIComponent(bedNumber as string) : '-'}号床 {getPositionLabel(position)}
+                  {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
                 </Text>
               </View>
             </View>
@@ -165,6 +201,24 @@ const DetailPage = () => {
               </Text>
             </View>
           )}
+
+          {/* 删除按钮：只在已搬离记录时显示 */}
+          {hasCheckOut && hasCheckOutId && (
+            <View className="mt-6 pt-4 border-t border-gray-200">
+              <Button
+                className="w-full bg-red-500 hover:bg-red-600 text-white"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <View className="flex items-center gap-2">
+                  <Trash2 size={18} color="#fff" />
+                  <Text className="text-white">删除记录</Text>
+                </View>
+              </Button>
+              <Text className="text-xs text-gray-400 text-center block mt-2">
+                删除后无法恢复
+              </Text>
+            </View>
+          )}
         </CardContent>
       </Card>
 
@@ -178,7 +232,7 @@ const DetailPage = () => {
             <View className="space-y-4">
               <View className="bg-gray-50 rounded-lg p-3 space-y-2">
                 <Text className="text-sm text-gray-600 block">
-                  床位: {bedNumber ? decodeURIComponent(bedNumber as string) : '-'}号床 - {getPositionLabel(position)}
+                  床位: {decodedBedNumber}号床 - {getPositionLabel(position)}
                 </Text>
                 <Text className="text-sm text-gray-600 block">
                   姓名: <Text className="text-blue-600 font-medium">{decodedName}</Text>
@@ -219,6 +273,35 @@ const DetailPage = () => {
               disabled={submitting}
             >
               {submitting ? '处理中...' : '确认搬离'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>删除记录</DialogTitle>
+          </DialogHeader>
+          <View className="py-4">
+            <View className="bg-red-50 rounded-lg p-3 mb-4">
+              <Text className="text-sm text-red-600 block">
+                确定要删除 {decodedName} 的搬离记录吗？
+              </Text>
+              <Text className="text-xs text-red-500 block mt-2">
+                删除后无法恢复
+              </Text>
+            </View>
+          </View>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>取消</Button>
+            <Button 
+              className="bg-red-500 text-white" 
+              onClick={handleDelete}
+              disabled={submitting}
+            >
+              {submitting ? '处理中...' : '确认删除'}
             </Button>
           </DialogFooter>
         </DialogContent>
