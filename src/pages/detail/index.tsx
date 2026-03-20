@@ -11,17 +11,23 @@ const DetailPage = () => {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
     try {
-      const date = new Date(dateStr)
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      const date = new Date(decodeURIComponent(dateStr))
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
     } catch {
-      return dateStr
+      return decodeURIComponent(dateStr || '-')
     }
   }
 
   const getPositionLabel = (pos?: string) => {
     if (!pos) return '-'
-    return pos === 'upper' ? '上铺' : '下铺'
+    const decoded = decodeURIComponent(pos)
+    return decoded === 'upper' ? '上铺' : '下铺'
   }
+
+  const decodedName = name ? decodeURIComponent(name) : '-'
+  const decodedIdCard = idCard ? decodeURIComponent(idCard) : '-'
+  const decodedPhone = phone ? decodeURIComponent(phone) : '-'
+  const hasCheckOut = checkOutTime && checkOutTime !== 'undefined'
 
   return (
     <View className="min-h-screen bg-gray-50 p-4">
@@ -30,7 +36,12 @@ const DetailPage = () => {
           <View className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-3">
             <User size={32} color="#2563eb" />
           </View>
-          <Text className="text-xl font-bold text-white block">{name || '未知'}</Text>
+          <Text className="text-xl font-bold text-white block">{decodedName}</Text>
+          {hasCheckOut && (
+            <View className="mt-2">
+              <Text className="text-xs text-blue-200">已搬离</Text>
+            </View>
+          )}
         </View>
         <CardContent className="p-4">
           <View className="space-y-4">
@@ -39,7 +50,7 @@ const DetailPage = () => {
               <View>
                 <Text className="text-xs text-gray-500 block">床位信息</Text>
                 <Text className="text-sm text-gray-800">
-                  {floor || '-'}楼 {bedNumber || '-'}号床 {getPositionLabel(position)}
+                  {floor ? decodeURIComponent(floor as string) : '-'}楼 {bedNumber ? decodeURIComponent(bedNumber as string) : '-'}号床 {getPositionLabel(position)}
                 </Text>
               </View>
             </View>
@@ -48,7 +59,7 @@ const DetailPage = () => {
               <CreditCard size={20} color="#6b7280" />
               <View>
                 <Text className="text-xs text-gray-500 block">身份证号</Text>
-                <Text className="text-sm text-gray-800">{idCard || '-'}</Text>
+                <Text className="text-sm text-gray-800">{decodedIdCard}</Text>
               </View>
             </View>
 
@@ -56,7 +67,7 @@ const DetailPage = () => {
               <Phone size={20} color="#6b7280" />
               <View>
                 <Text className="text-xs text-gray-500 block">手机号</Text>
-                <Text className="text-sm text-gray-800">{phone || '-'}</Text>
+                <Text className="text-sm text-gray-800">{decodedPhone}</Text>
               </View>
             </View>
 
@@ -68,7 +79,7 @@ const DetailPage = () => {
               </View>
             </View>
 
-            {checkOutTime && (
+            {hasCheckOut && (
               <View className="flex items-center gap-3">
                 <LogOut size={20} color="#f97316" />
                 <View>

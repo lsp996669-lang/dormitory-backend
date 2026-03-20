@@ -1,4 +1,4 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Picker } from '@tarojs/components'
 import { useState } from 'react'
 import Taro, { useRouter, useDidShow } from '@tarojs/taro'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Network } from '@/network'
-import { Bed, User, Phone, CreditCard } from 'lucide-react-taro'
+import { Bed, User, Phone, CreditCard, Calendar } from 'lucide-react-taro'
 import './index.css'
 
 interface BedInfo {
@@ -26,6 +26,8 @@ interface BedInfo {
   checkIn?: {
     id: number
     name: string
+    idCard: string
+    phone: string
     checkInTime: string
   }
 }
@@ -44,7 +46,8 @@ const CheckInPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     idCard: '',
-    phone: ''
+    phone: '',
+    checkInDate: ''
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -114,11 +117,23 @@ const CheckInPage = () => {
     if (mode === 'checkin') {
       if (bed.status === 'empty') {
         setSelectedBed(bed)
+        // 设置默认入住日期为今天
+        const today = new Date()
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        setFormData({
+          name: '',
+          idCard: '',
+          phone: '',
+          checkInDate: dateStr
+        })
         setShowForm(true)
       } else {
-        // 已入住的床位，显示搬离确认
-        setSelectedBed(bed)
-        setShowConfirm(true)
+        // 已入住的床位，点击名字查看详情
+        if (bed.checkIn) {
+          Taro.navigateTo({
+            url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}`
+          })
+        }
       }
     } else {
       // checkout 模式
@@ -145,6 +160,10 @@ const CheckInPage = () => {
       Taro.showToast({ title: '手机号格式不正确', icon: 'none' })
       return
     }
+    if (!formData.checkInDate) {
+      Taro.showToast({ title: '请选择入住日期', icon: 'none' })
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -155,7 +174,8 @@ const CheckInPage = () => {
           bedId: selectedBed.id,
           name: formData.name,
           idCard: formData.idCard,
-          phone: formData.phone
+          phone: formData.phone,
+          checkInDate: formData.checkInDate
         }
       })
 
@@ -164,7 +184,7 @@ const CheckInPage = () => {
       if (res.data?.code === 200) {
         Taro.showToast({ title: '入住成功', icon: 'success' })
         setShowForm(false)
-        setFormData({ name: '', idCard: '', phone: '' })
+        setFormData({ name: '', idCard: '', phone: '', checkInDate: '' })
         loadBeds()
       } else {
         Taro.showToast({ title: res.data?.msg || '入住失败', icon: 'none' })
@@ -210,6 +230,16 @@ const CheckInPage = () => {
 
   const getPositionLabel = (position: string) => {
     return position === 'upper' ? '上铺' : '下铺'
+  }
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return ''
+    try {
+      const date = new Date(dateStr)
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
+    } catch {
+      return dateStr
+    }
   }
 
   return (
@@ -259,14 +289,20 @@ const CheckInPage = () => {
                             上铺
                           </Text>
                         </View>
-                        {upperBed?.status === 'occupied' && upperBed.checkIn && (
+                        {upperBed?.status === 'occupied' && (
                           <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
                         )}
                       </View>
+                      {upperBed?.status === 'empty' && (
+                        <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                      )}
                       {upperBed?.status === 'occupied' && upperBed.checkIn && (
-                        <Text className="text-xs text-gray-600 block mt-1 truncate">
-                          {upperBed.checkIn.name}
-                        </Text>
+                        <View className="mt-1">
+                          <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                          <Text className="text-xs text-gray-500 block">
+                            入住: {formatDate(upperBed.checkIn.checkInTime)}
+                          </Text>
+                        </View>
                       )}
                     </View>
 
@@ -289,14 +325,20 @@ const CheckInPage = () => {
                             下铺
                           </Text>
                         </View>
-                        {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
+                        {lowerBed?.status === 'occupied' && (
                           <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
                         )}
                       </View>
+                      {lowerBed?.status === 'empty' && (
+                        <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                      )}
                       {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
-                        <Text className="text-xs text-gray-600 block mt-1 truncate">
-                          {lowerBed.checkIn.name}
-                        </Text>
+                        <View className="mt-1">
+                          <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                          <Text className="text-xs text-gray-500 block">
+                            入住: {formatDate(lowerBed.checkIn.checkInTime)}
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -356,6 +398,23 @@ const CheckInPage = () => {
                 onInput={(e) => setFormData({ ...formData, phone: e.detail.value })}
               />
             </View>
+            <View>
+              <Label className="text-sm text-gray-700 flex items-center gap-1">
+                <Calendar size={14} color="#6b7280" />
+                <Text>入住日期</Text>
+              </Label>
+              <Picker
+                mode="date"
+                value={formData.checkInDate}
+                onChange={(e) => setFormData({ ...formData, checkInDate: e.detail.value })}
+              >
+                <View className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <Text className={formData.checkInDate ? 'text-foreground' : 'text-muted-foreground'}>
+                    {formData.checkInDate || '请选择入住日期'}
+                  </Text>
+                </View>
+              </Picker>
+            </View>
           </View>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowForm(false)}>取消</Button>
@@ -374,23 +433,27 @@ const CheckInPage = () => {
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>确认搬离</DialogTitle>
-            <DialogDescription>
-              确定要为 <Text className="font-semibold">{selectedBed?.checkIn?.name}</Text> 办理搬离吗？
-            </DialogDescription>
+            <DialogTitle>搬离登记</DialogTitle>
           </DialogHeader>
           <View className="py-4">
-            <View className="bg-gray-50 rounded-lg p-3 space-y-2">
-              <Text className="text-sm text-gray-600 block">
-                床位: {selectedBed?.bedNumber}号床 - {selectedBed && getPositionLabel(selectedBed.position)}
-              </Text>
-              <Text className="text-sm text-gray-600 block">
-                入住时间: {selectedBed?.checkIn?.checkInTime}
-              </Text>
-            </View>
-            <Text className="text-xs text-red-500 block mt-3">
-              此操作不可撤销，请谨慎操作
-            </Text>
+            {selectedBed?.checkIn && (
+              <View className="space-y-3">
+                <View className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <Text className="text-sm text-gray-600 block">
+                    床位: {selectedBed?.bedNumber}号床 - {selectedBed && getPositionLabel(selectedBed.position)}
+                  </Text>
+                  <Text className="text-sm text-gray-600 block">
+                    姓名: <Text className="text-blue-600 font-medium">{selectedBed.checkIn.name}</Text>
+                  </Text>
+                  <Text className="text-sm text-gray-600 block">
+                    入住日期: {formatDate(selectedBed.checkIn.checkInTime)}
+                  </Text>
+                </View>
+                <Text className="text-xs text-red-500 block">
+                  确认搬离后，信息将记录到搬离名单
+                </Text>
+              </View>
+            )}
           </View>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirm(false)}>取消</Button>

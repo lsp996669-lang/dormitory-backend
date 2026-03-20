@@ -3,7 +3,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 @Injectable()
 export class CheckInService {
-  async checkIn(bedId: number, name: string, idCard: string, phone: string) {
+  async checkIn(bedId: number, name: string, idCard: string, phone: string, checkInDate?: string) {
     const client = getSupabaseClient();
 
     // 检查床位是否存在且为空
@@ -21,6 +21,9 @@ export class CheckInService {
       throw new Error('该床位已被占用');
     }
 
+    // 处理入住日期
+    const checkInTime = checkInDate ? new Date(checkInDate).toISOString() : new Date().toISOString();
+
     // 创建入住记录
     const { data: checkIn, error: checkInError } = await client
       .from('check_ins')
@@ -29,6 +32,7 @@ export class CheckInService {
         name,
         id_card: idCard,
         phone,
+        check_in_time: checkInTime,
       })
       .select()
       .single();
