@@ -6,9 +6,9 @@ export class CheckOutController {
   constructor(private readonly checkOutService: CheckOutService) {}
 
   @Post()
-  async checkOut(@Body() body: { checkInId: number; bedId: number }) {
+  async checkOut(@Body() body: { checkInId: number; bedId: number; checkOutDate?: string }) {
     console.log('搬离登记请求:', body);
-    return await this.checkOutService.checkOut(body.checkInId, body.bedId);
+    return await this.checkOutService.checkOut(body.checkInId, body.bedId, body.checkOutDate);
   }
 
   @Get('list')

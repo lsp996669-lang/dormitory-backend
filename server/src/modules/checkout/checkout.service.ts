@@ -3,7 +3,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 @Injectable()
 export class CheckOutService {
-  async checkOut(checkInId: number, bedId: number) {
+  async checkOut(checkInId: number, bedId: number, checkOutDate?: string) {
     const client = getSupabaseClient();
 
     // 获取入住记录
@@ -28,6 +28,9 @@ export class CheckOutService {
       throw new Error('床位不存在');
     }
 
+    // 处理搬离日期
+    const checkOutTime = checkOutDate ? new Date(checkOutDate).toISOString() : new Date().toISOString();
+
     // 创建搬离记录
     const { data: checkOut, error: checkOutError } = await client
       .from('check_outs')
@@ -38,6 +41,7 @@ export class CheckOutService {
         id_card: checkIn.id_card,
         phone: checkIn.phone,
         check_in_time: checkIn.check_in_time,
+        check_out_time: checkOutTime,
       })
       .select()
       .single();

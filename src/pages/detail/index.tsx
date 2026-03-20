@@ -1,8 +1,15 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Picker } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { User, Phone, CreditCard, Calendar, LogOut, Bed } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
@@ -11,6 +18,11 @@ const DetailPage = () => {
   const router = useRouter()
   const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId } = router.params
   const [submitting, setSubmitting] = useState(false)
+  const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
+  const [checkOutDate, setCheckOutDate] = useState(() => {
+    const today = new Date()
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  })
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
@@ -39,6 +51,11 @@ const DetailPage = () => {
       return
     }
 
+    if (!checkOutDate) {
+      Taro.showToast({ title: '请选择搬离日期', icon: 'none' })
+      return
+    }
+
     setSubmitting(true)
     try {
       const res = await Network.request({
@@ -46,7 +63,8 @@ const DetailPage = () => {
         method: 'POST',
         data: {
           checkInId: parseInt(checkInId as string, 10),
-          bedId: parseInt(bedId as string, 10)
+          bedId: parseInt(bedId as string, 10),
+          checkOutDate: checkOutDate
         }
       })
 
@@ -54,6 +72,7 @@ const DetailPage = () => {
 
       if (res.data?.code === 200) {
         Taro.showToast({ title: '搬离成功', icon: 'success' })
+        setShowCheckOutDialog(false)
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
@@ -134,12 +153,11 @@ const DetailPage = () => {
             <View className="mt-6 pt-4 border-t border-gray-200">
               <Button
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                onClick={handleCheckOut}
-                disabled={submitting}
+                onClick={() => setShowCheckOutDialog(true)}
               >
                 <View className="flex items-center gap-2">
                   <LogOut size={18} color="#fff" />
-                  <Text className="text-white">{submitting ? '处理中...' : '确认搬离'}</Text>
+                  <Text className="text-white">确认搬离</Text>
                 </View>
               </Button>
               <Text className="text-xs text-gray-400 text-center block mt-2">
@@ -149,6 +167,62 @@ const DetailPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* 搬离日期选择对话框 */}
+      <Dialog open={showCheckOutDialog} onOpenChange={setShowCheckOutDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>搬离登记</DialogTitle>
+          </DialogHeader>
+          <View className="py-4">
+            <View className="space-y-4">
+              <View className="bg-gray-50 rounded-lg p-3 space-y-2">
+                <Text className="text-sm text-gray-600 block">
+                  床位: {bedNumber ? decodeURIComponent(bedNumber as string) : '-'}号床 - {getPositionLabel(position)}
+                </Text>
+                <Text className="text-sm text-gray-600 block">
+                  姓名: <Text className="text-blue-600 font-medium">{decodedName}</Text>
+                </Text>
+                <Text className="text-sm text-gray-600 block">
+                  入住日期: {formatDate(checkInTime)}
+                </Text>
+              </View>
+
+              <View>
+                <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                  <Calendar size={14} color="#6b7280" />
+                  <Text>搬离日期</Text>
+                </Text>
+                <Picker
+                  mode="date"
+                  value={checkOutDate}
+                  onChange={(e) => setCheckOutDate(e.detail.value)}
+                >
+                  <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <Text className={checkOutDate ? 'text-foreground' : 'text-muted-foreground'}>
+                      {checkOutDate || '请选择搬离日期'}
+                    </Text>
+                  </View>
+                </Picker>
+              </View>
+
+              <Text className="text-xs text-red-500 block">
+                确认搬离后，信息将记录到搬离名单
+              </Text>
+            </View>
+          </View>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCheckOutDialog(false)}>取消</Button>
+            <Button 
+              className="bg-orange-500 text-white" 
+              onClick={handleCheckOut}
+              disabled={submitting}
+            >
+              {submitting ? '处理中...' : '确认搬离'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </View>
   )
 }
