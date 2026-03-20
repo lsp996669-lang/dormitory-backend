@@ -41,18 +41,39 @@ const LoginPage = () => {
     }
   }
 
+  // 获取微信登录 code
+  const getWxLoginCode = async (): Promise<string> => {
+    const env = Taro.getEnv()
+    
+    if (env === Taro.ENV_TYPE.WEAPP) {
+      // 微信小程序环境，调用真实登录
+      try {
+        const loginRes = await Taro.login()
+        console.log('微信登录成功，code:', loginRes.code)
+        return loginRes.code
+      } catch (error) {
+        console.error('微信登录失败:', error)
+        throw new Error('微信登录失败')
+      }
+    } else {
+      // H5 开发环境，使用模拟登录
+      console.log('H5 环境，使用模拟登录')
+      return `mock_code_${Date.now()}`
+    }
+  }
+
   const handleLogin = async () => {
     setLoading(true)
     try {
-      // 模拟微信登录
-      // 实际项目中应调用 Taro.login() 获取 code
-      const mockOpenid = `openid_${Date.now()}`
+      // 获取登录 code
+      const code = await getWxLoginCode()
       
+      // 发送到后端进行登录
       const res = await Network.request({
         url: '/api/auth/login',
         method: 'POST',
         data: {
-          openid: mockOpenid,
+          code,
           nickname: '用户',
           avatar: ''
         }
@@ -71,11 +92,18 @@ const LoginPage = () => {
         } else {
           setStatus('pending')
         }
+        
+        Taro.showToast({
+          title: '登录成功',
+          icon: 'success'
+        })
+      } else {
+        throw new Error(res.data?.msg || '登录失败')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('登录失败:', error)
       Taro.showToast({
-        title: '登录失败，请重试',
+        title: error.message || '登录失败，请重试',
         icon: 'none'
       })
     } finally {
@@ -85,6 +113,45 @@ const LoginPage = () => {
 
   const handleEnterSystem = () => {
     Taro.redirectTo({ url: '/pages/floor/index' })
+  }
+
+  const handleRefreshStatus = async () => {
+    setLoading(true)
+    try {
+      const storedUser = Taro.getStorageSync('userInfo')
+      if (storedUser) {
+        // 从后端获取最新用户状态
+        const res = await Network.request({
+          url: '/api/auth/user/' + storedUser.id
+        })
+        
+        if (res.data?.code === 200 && res.data?.data) {
+          const user = res.data.data
+          Taro.setStorageSync('userInfo', user)
+          
+          if (user.isHost) {
+            setStatus('host')
+          } else if (user.isApproved) {
+            setStatus('approved')
+          } else {
+            setStatus('pending')
+          }
+          
+          Taro.showToast({
+            title: '状态已更新',
+            icon: 'success'
+          })
+        }
+      }
+    } catch (error) {
+      console.error('刷新状态失败:', error)
+      Taro.showToast({
+        title: '刷新失败',
+        icon: 'none'
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -111,6 +178,11 @@ const LoginPage = () => {
                 </Text>
               </View>
             </Button>
+            <Text className="block text-center text-xs text-gray-400 mt-3">
+              {Taro.getEnv() === Taro.ENV_TYPE.WEAPP 
+                ? '点击按钮使用微信登录' 
+                : '开发环境：点击按钮模拟登录'}
+            </Text>
           </CardContent>
         </Card>
       )}
@@ -130,9 +202,10 @@ const LoginPage = () => {
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={checkLoginStatus}
+              onClick={handleRefreshStatus}
+              disabled={loading}
             >
-              刷新状态
+              {loading ? '刷新中...' : '刷新状态'}
             </Button>
           </CardContent>
         </Card>
