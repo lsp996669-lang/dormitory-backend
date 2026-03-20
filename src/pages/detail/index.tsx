@@ -1,12 +1,16 @@
 import { View, Text } from '@tarojs/components'
-import { useRouter } from '@tarojs/taro'
+import Taro, { useRouter } from '@tarojs/taro'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { User, Phone, CreditCard, Calendar, LogOut, Bed } from 'lucide-react-taro'
+import { Network } from '@/network'
 import './index.css'
 
 const DetailPage = () => {
   const router = useRouter()
-  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position } = router.params
+  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId } = router.params
+  const [submitting, setSubmitting] = useState(false)
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
@@ -28,6 +32,41 @@ const DetailPage = () => {
   const decodedIdCard = idCard ? decodeURIComponent(idCard) : '-'
   const decodedPhone = phone ? decodeURIComponent(phone) : '-'
   const hasCheckOut = checkOutTime && checkOutTime !== 'undefined'
+
+  const handleCheckOut = async () => {
+    if (!checkInId || !bedId) {
+      Taro.showToast({ title: '缺少必要参数', icon: 'none' })
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await Network.request({
+        url: '/api/checkout',
+        method: 'POST',
+        data: {
+          checkInId: parseInt(checkInId as string, 10),
+          bedId: parseInt(bedId as string, 10)
+        }
+      })
+
+      console.log('搬离登记响应:', res.data)
+
+      if (res.data?.code === 200) {
+        Taro.showToast({ title: '搬离成功', icon: 'success' })
+        setTimeout(() => {
+          Taro.navigateBack()
+        }, 1500)
+      } else {
+        Taro.showToast({ title: res.data?.msg || '搬离失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('搬离登记失败:', error)
+      Taro.showToast({ title: '搬离失败，请重试', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <View className="min-h-screen bg-gray-50 p-4">
@@ -89,6 +128,25 @@ const DetailPage = () => {
               </View>
             )}
           </View>
+
+          {/* 搬离按钮：只在未搬离时显示 */}
+          {!hasCheckOut && checkInId && bedId && (
+            <View className="mt-6 pt-4 border-t border-gray-200">
+              <Button
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={handleCheckOut}
+                disabled={submitting}
+              >
+                <View className="flex items-center gap-2">
+                  <LogOut size={18} color="#fff" />
+                  <Text className="text-white">{submitting ? '处理中...' : '确认搬离'}</Text>
+                </View>
+              </Button>
+              <Text className="text-xs text-gray-400 text-center block mt-2">
+                搬离后信息将记录到搬离名单
+              </Text>
+            </View>
+          )}
         </CardContent>
       </Card>
     </View>

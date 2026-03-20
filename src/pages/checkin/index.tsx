@@ -34,15 +34,14 @@ interface BedInfo {
 
 const CheckInPage = () => {
   const router = useRouter()
-  const { floor: floorParam, type } = router.params
+  const { floor: floorParam } = router.params
   const floor = parseInt(floorParam || '1', 10)
-  const mode = type === 'checkout' ? 'checkout' : 'checkin'
 
   const [beds, setBeds] = useState<BedInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedBed, setSelectedBed] = useState<BedInfo | null>(null)
   const [showForm, setShowForm] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
+
   const [formData, setFormData] = useState({
     name: '',
     idCard: '',
@@ -130,32 +129,24 @@ const CheckInPage = () => {
   }
 
   const handleBedClick = (bed: BedInfo) => {
-    if (mode === 'checkin') {
-      if (bed.status === 'empty') {
-        setSelectedBed(bed)
-        // 设置默认入住日期为今天
-        const today = new Date()
-        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-        setFormData({
-          name: '',
-          idCard: '',
-          phone: '',
-          checkInDate: dateStr
-        })
-        setShowForm(true)
-      } else {
-        // 已入住的床位，点击名字查看详情
-        if (bed.checkIn) {
-          Taro.navigateTo({
-            url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}`
-          })
-        }
-      }
+    if (bed.status === 'empty') {
+      setSelectedBed(bed)
+      // 设置默认入住日期为今天
+      const today = new Date()
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+      setFormData({
+        name: '',
+        idCard: '',
+        phone: '',
+        checkInDate: dateStr
+      })
+      setShowForm(true)
     } else {
-      // checkout 模式
-      if (bed.status === 'occupied') {
-        setSelectedBed(bed)
-        setShowConfirm(true)
+      // 已入住的床位，点击名字查看详情
+      if (bed.checkIn) {
+        Taro.navigateTo({
+          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}`
+        })
       }
     }
   }
@@ -213,37 +204,6 @@ const CheckInPage = () => {
     }
   }
 
-  const handleCheckOut = async () => {
-    if (!selectedBed || !selectedBed.checkIn) return
-
-    setSubmitting(true)
-    try {
-      const res = await Network.request({
-        url: '/api/checkout',
-        method: 'POST',
-        data: {
-          checkInId: selectedBed.checkIn.id,
-          bedId: selectedBed.id
-        }
-      })
-
-      console.log('搬离登记响应:', res.data)
-
-      if (res.data?.code === 200) {
-        Taro.showToast({ title: '搬离成功', icon: 'success' })
-        setShowConfirm(false)
-        loadBeds()
-      } else {
-        Taro.showToast({ title: res.data?.msg || '搬离失败', icon: 'none' })
-      }
-    } catch (error) {
-      console.error('搬离登记失败:', error)
-      Taro.showToast({ title: '搬离失败，请重试', icon: 'none' })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   const getPositionLabel = (position: string) => {
     return position === 'upper' ? '上铺' : '下铺'
   }
@@ -262,10 +222,10 @@ const CheckInPage = () => {
     <View className="min-h-screen bg-gray-50">
       <View className="bg-white px-4 py-3 border-b border-gray-200">
         <Text className="text-lg font-semibold text-gray-800">
-          {floor}楼 - {mode === 'checkin' ? '入住登记' : '搬离登记'}
+          {floor}楼 - 入住登记
         </Text>
         <Text className="text-xs text-gray-500 block mt-1">
-          {mode === 'checkin' ? '点击空床位进行入住登记' : '点击已入住床位进行搬离'}
+          点击空床位进行入住登记，点击已入住床位查看详情
         </Text>
       </View>
 
@@ -440,45 +400,6 @@ const CheckInPage = () => {
               disabled={submitting}
             >
               {submitting ? '提交中...' : '确认入住'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 搬离确认对话框 */}
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>搬离登记</DialogTitle>
-          </DialogHeader>
-          <View className="py-4">
-            {selectedBed?.checkIn && (
-              <View className="space-y-3">
-                <View className="bg-gray-50 rounded-lg p-3 space-y-2">
-                  <Text className="text-sm text-gray-600 block">
-                    床位: {selectedBed?.bedNumber}号床 - {selectedBed && getPositionLabel(selectedBed.position)}
-                  </Text>
-                  <Text className="text-sm text-gray-600 block">
-                    姓名: <Text className="text-blue-600 font-medium">{selectedBed.checkIn.name}</Text>
-                  </Text>
-                  <Text className="text-sm text-gray-600 block">
-                    入住日期: {formatDate(selectedBed.checkIn.checkInTime)}
-                  </Text>
-                </View>
-                <Text className="text-xs text-red-500 block">
-                  确认搬离后，信息将记录到搬离名单
-                </Text>
-              </View>
-            )}
-          </View>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirm(false)}>取消</Button>
-            <Button 
-              className="bg-orange-500 text-white" 
-              onClick={handleCheckOut}
-              disabled={submitting}
-            >
-              {submitting ? '处理中...' : '确认搬离'}
             </Button>
           </DialogFooter>
         </DialogContent>

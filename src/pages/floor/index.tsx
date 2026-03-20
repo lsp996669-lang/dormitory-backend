@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building, Bed, LogOut } from 'lucide-react-taro'
+import { Building, Bed } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -64,9 +64,9 @@ const FloorPage = () => {
     }
   }
 
-  const handleFloorClick = (floor: number, type: 'checkin' | 'checkout') => {
+  const handleFloorClick = (floor: number) => {
     Taro.navigateTo({
-      url: `/pages/checkin/index?floor=${floor}&type=${type}`
+      url: `/pages/checkin/index?floor=${floor}`
     })
   }
 
@@ -74,7 +74,7 @@ const FloorPage = () => {
     <View className="min-h-screen bg-gray-50 p-4">
       <View className="mb-6">
         <Text className="text-2xl font-bold text-gray-800 block">宿舍管理</Text>
-        <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住或搬离操作</Text>
+        <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住登记，点击已入住床位可搬离</Text>
       </View>
 
       {loading ? (
@@ -99,27 +99,15 @@ const FloorPage = () => {
                 </View>
               </CardHeader>
               <CardContent className="pt-0">
-                <View className="flex gap-3">
-                  <Button
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={() => handleFloorClick(floor.floor, 'checkin')}
-                  >
-                    <View className="flex items-center gap-2">
-                      <Bed size={18} color="#fff" />
-                      <Text className="text-white text-sm">入住登记</Text>
-                    </View>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-orange-500 text-orange-500 hover:bg-orange-50"
-                    onClick={() => handleFloorClick(floor.floor, 'checkout')}
-                  >
-                    <View className="flex items-center gap-2">
-                      <LogOut size={18} color="#f97316" />
-                      <Text className="text-orange-500 text-sm">搬离登记</Text>
-                    </View>
-                  </Button>
-                </View>
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => handleFloorClick(floor.floor)}
+                >
+                  <View className="flex items-center gap-2">
+                    <Bed size={18} color="#fff" />
+                    <Text className="text-white text-sm">入住登记</Text>
+                  </View>
+                </Button>
               </CardContent>
             </Card>
           ))}
