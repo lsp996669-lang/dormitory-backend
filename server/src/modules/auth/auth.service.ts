@@ -87,7 +87,7 @@ export class AuthService {
       user = updatedUser;
       console.log('更新用户成功:', user);
     } else {
-      // 创建新用户，直接批准
+      // 创建新用户，默认未验证，需要邀请码验证
       const { data: newUser, error: createError } = await client
         .from('users')
         .insert({
@@ -95,7 +95,7 @@ export class AuthService {
           nickname: nickname || '用户',
           avatar: avatar || '',
           is_host: false,
-          is_approved: true, // 直接批准，无需审批
+          is_approved: false, // 默认未验证，需要邀请码
         })
         .select()
         .single();
@@ -137,6 +137,76 @@ export class AuthService {
       code: 200,
       msg: '获取成功',
       data,
+    };
+  }
+
+  /**
+   * 验证邀请码
+   * @param userId 用户ID
+   * @param inviteCode 邀请码
+   */
+  async verifyInviteCode(userId: string, inviteCode: string) {
+    const client = getSupabaseClient();
+
+    // 从环境变量获取有效邀请码列表
+    const validCodes = process.env.INVITE_CODES?.split(',').map(c => c.trim()) || [];
+    
+    // 默认邀请码（如果没有配置环境变量）
+    const defaultCodes = ['DORM2024', 'ADMIN2024', 'TEST2024'];
+    const allValidCodes = validCodes.length > 0 ? validCodes : defaultCodes;
+
+    console.log('验证邀请码:', inviteCode, '有效邀请码列表:', allValidCodes);
+
+    if (!allValidCodes.includes(inviteCode)) {
+      return {
+        code: 400,
+        msg: '邀请码无效',
+        data: null,
+      };
+    }
+
+    // 查询用户
+    const { data: user, error: findError } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (findError || !user) {
+      console.error('查询用户失败:', findError);
+      return {
+        code: 404,
+        msg: '用户不存在',
+        data: null,
+      };
+    }
+
+    // 更新用户审批状态
+    const { data: updatedUser, error: updateError } = await client
+      .from('users')
+      .update({
+        is_approved: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('更新用户状态失败:', updateError);
+      return {
+        code: 500,
+        msg: '验证失败，请重试',
+        data: null,
+      };
+    }
+
+    console.log('邀请码验证成功，用户已批准:', updatedUser);
+
+    return {
+      code: 200,
+      msg: '验证成功',
+      data: updatedUser,
     };
   }
 }

@@ -16,4 +16,10 @@ export class AuthController {
     console.log('获取用户信息请求:', id);
     return await this.authService.getUserById(id);
   }
+
+  @Post('verify-invite')
+  async verifyInvite(@Body() body: { userId: string; inviteCode: string }) {
+    console.log('邀请码验证请求:', body);
+    return await this.authService.verifyInviteCode(body.userId, body.inviteCode);
+  }
 }
