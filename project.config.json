@@ -1,7 +1,7 @@
 {
   "miniprogramRoot": "./dist",
-  "projectname": "coze-mini-program",
-  "description": "test",
+  "projectname": "宿舍管理助手小程序",
+  "description": "宿舍管理助手小程序 - 企业内部宿舍入住与搬离管理系统",
   "appid": "touristappid",
   "setting": {
     "urlCheck": true,

@@ -8,9 +8,9 @@ export default defineAppConfig({
   ],
   window: {
     backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#fff',
-    navigationBarTitleText: '宿舍管理',
-    navigationBarTextStyle: 'black'
+    navigationBarBackgroundColor: '#2563eb',
+    navigationBarTitleText: '宿舍管理助手',
+    navigationBarTextStyle: 'white'
   },
   tabBar: {
     color: '#999999',
