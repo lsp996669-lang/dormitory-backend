@@ -39,18 +39,18 @@ const CheckOutPage = () => {
       console.log('搬离记录响应:', res.data)
 
       if (res.data?.code === 200 && res.data?.data) {
-        // 转换字段名
+        // 后端已返回驼峰命名，直接使用
         const formattedRecords = res.data.data.map((record: any) => ({
           id: record.id,
-          checkInId: record.check_in_id,
-          bedId: record.bed_id,
+          checkInId: record.checkInId || record.check_in_id,
+          bedId: record.bedId || record.bed_id,
           name: record.name,
-          idCard: record.id_card,
+          idCard: record.idCard || record.id_card,
           phone: record.phone,
-          checkInTime: record.check_in_time,
-          checkOutTime: record.check_out_time,
+          checkInTime: record.checkInTime || record.check_in_time,
+          checkOutTime: record.checkOutTime || record.check_out_time,
           floor: record.floor,
-          bedNumber: record.bed_number,
+          bedNumber: record.bedNumber || record.bed_number,
           position: record.position
         }))
         setRecords(formattedRecords)
