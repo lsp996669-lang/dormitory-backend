@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class CheckInService {
+  constructor(private readonly notificationService: NotificationService) {}
+
   async checkIn(bedId: number, name: string, idCard: string, phone: string, checkInDate?: string) {
     const client = getSupabaseClient();
 
@@ -53,6 +56,16 @@ export class CheckInService {
       // 回滚入住记录
       await client.from('check_ins').delete().eq('id', checkIn.id);
       throw new Error('入住登记失败');
+    }
+
+    // 创建入住通知（仅2楼及以上楼层）
+    if (bed.floor >= 2) {
+      await this.notificationService.createCheckInNotification({
+        floor: bed.floor,
+        bedNumber: bed.bed_number,
+        position: bed.position,
+        name,
+      });
     }
 
     console.log('入住登记成功:', checkIn);
