@@ -22,4 +22,10 @@ export class CheckOutController {
     console.log('删除搬离记录请求:', id);
     return await this.checkOutService.deleteCheckOut(parseInt(id, 10));
   }
+
+  @Post('batch-delete')
+  async batchDeleteCheckOut(@Body() body: { ids: number[] }) {
+    console.log('批量删除搬离记录请求:', body.ids);
+    return await this.checkOutService.batchDeleteCheckOut(body.ids);
+  }
 }

@@ -1,15 +1,16 @@
 {
-  "miniprogramRoot": "./dist",
+  "miniprogramRoot": "./dist-weapp",
   "projectname": "宿舍管理助手小程序",
   "description": "宿舍管理助手小程序 - 企业内部宿舍入住与搬离管理系统",
   "appid": "touristappid",
   "setting": {
-    "urlCheck": true,
+    "urlCheck": false,
     "es6": false,
     "enhance": false,
-    "compileHotReLoad": false,
+    "compileHotReLoad": true,
     "postcss": false,
     "minified": false
   },
-  "compileType": "miniprogram"
+  "compileType": "miniprogram",
+  "srcMiniprogramRoot": "./src/"
 }

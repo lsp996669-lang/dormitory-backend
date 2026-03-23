@@ -142,4 +142,30 @@ export class CheckOutService {
       data: null,
     };
   }
+
+  async batchDeleteCheckOut(ids: number[]) {
+    const client = getSupabaseClient();
+
+    if (!ids || ids.length === 0) {
+      throw new Error('请选择要删除的记录');
+    }
+
+    // 批量删除搬离记录
+    const { error } = await client
+      .from('check_outs')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      console.error('批量删除搬离记录失败:', error);
+      throw new Error('批量删除失败');
+    }
+
+    console.log('批量删除搬离记录成功:', ids);
+    return {
+      code: 200,
+      msg: `成功删除 ${ids.length} 条记录`,
+      data: { deletedCount: ids.length },
+    };
+  }
 }
