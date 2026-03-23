@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Network } from '@/network'
 import { LogOut, Calendar, Bed, Building, User, ChevronDown, ChevronUp, Trash2, X } from 'lucide-react-taro'
+import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
 
 interface CheckOutRecord {
@@ -28,6 +29,7 @@ const CheckOutPage = () => {
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [deleting, setDeleting] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
 
   useDidShow(() => {
     loadRecords()
@@ -142,7 +144,8 @@ const CheckOutPage = () => {
     setSelectedIds(new Set())
   }
 
-  const handleBatchDelete = async () => {
+  // 打开密码对话框
+  const handleBatchDeleteClick = () => {
     if (selectedIds.size === 0) {
       Taro.showToast({
         title: '请选择要删除的记录',
@@ -150,14 +153,12 @@ const CheckOutPage = () => {
       })
       return
     }
+    setShowPasswordDialog(true)
+  }
 
-    const res = await Taro.showModal({
-      title: '确认删除',
-      content: `确定要删除选中的 ${selectedIds.size} 条记录吗？`
-    })
-
-    if (!res.confirm) return
-
+  // 密码验证成功后执行删除
+  const executeBatchDelete = async () => {
+    setShowPasswordDialog(false)
     setDeleting(true)
     try {
       const ids = Array.from(selectedIds)
@@ -255,7 +256,7 @@ const CheckOutPage = () => {
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={handleBatchDelete}
+                  onClick={handleBatchDeleteClick}
                   disabled={selectedIds.size === 0 || deleting}
                   className="text-xs"
                 >
@@ -368,6 +369,15 @@ const CheckOutPage = () => {
           ))}
         </View>
       )}
+
+      {/* 密码验证对话框 */}
+      <PasswordDialog
+        open={showPasswordDialog}
+        title="删除验证"
+        confirmText="确认删除"
+        onConfirm={executeBatchDelete}
+        onCancel={() => setShowPasswordDialog(false)}
+      />
     </View>
   )
 }

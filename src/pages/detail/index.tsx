@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2 } from 'lucide-react-taro'
 import { Network } from '@/network'
+import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
 
 const DetailPage = () => {
@@ -19,7 +20,7 @@ const DetailPage = () => {
   const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId } = router.params
   const [submitting, setSubmitting] = useState(false)
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [checkOutDate, setCheckOutDate] = useState(() => {
     const today = new Date()
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -91,12 +92,19 @@ const DetailPage = () => {
     }
   }
 
+  // 点击删除按钮，先弹出密码验证
+  const handleDeleteClick = () => {
+    setShowPasswordDialog(true)
+  }
+
+  // 密码验证成功后执行删除
   const handleDelete = async () => {
     if (!checkOutId) {
       Taro.showToast({ title: '缺少必要参数', icon: 'none' })
       return
     }
 
+    setShowPasswordDialog(false)
     setSubmitting(true)
     try {
       const res = await Network.request({
@@ -108,7 +116,6 @@ const DetailPage = () => {
 
       if (res.data?.code === 200) {
         Taro.showToast({ title: '删除成功', icon: 'success' })
-        setShowDeleteDialog(false)
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
@@ -207,7 +214,7 @@ const DetailPage = () => {
             <View className="mt-6 pt-4 border-t border-gray-200">
               <Button
                 className="w-full bg-red-500 hover:bg-red-600 text-white"
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={handleDeleteClick}
               >
                 <View className="flex items-center gap-2">
                   <Trash2 size={18} color="#fff" />
@@ -215,7 +222,7 @@ const DetailPage = () => {
                 </View>
               </Button>
               <Text className="text-xs text-gray-400 text-center block mt-2">
-                删除后无法恢复
+                删除后无法恢复，需输入密码确认
               </Text>
             </View>
           )}
@@ -278,34 +285,14 @@ const DetailPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 删除确认对话框 */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>删除记录</DialogTitle>
-          </DialogHeader>
-          <View className="py-4">
-            <View className="bg-red-50 rounded-lg p-3 mb-4">
-              <Text className="text-sm text-red-600 block">
-                确定要删除 {decodedName} 的搬离记录吗？
-              </Text>
-              <Text className="text-xs text-red-500 block mt-2">
-                删除后无法恢复
-              </Text>
-            </View>
-          </View>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>取消</Button>
-            <Button 
-              className="bg-red-500 text-white" 
-              onClick={handleDelete}
-              disabled={submitting}
-            >
-              {submitting ? '处理中...' : '确认删除'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 密码验证对话框 */}
+      <PasswordDialog
+        open={showPasswordDialog}
+        title="删除验证"
+        confirmText="确认删除"
+        onConfirm={handleDelete}
+        onCancel={() => setShowPasswordDialog(false)}
+      />
     </View>
   )
 }
