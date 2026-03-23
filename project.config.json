@@ -9,8 +9,11 @@
     "enhance": false,
     "compileHotReLoad": true,
     "postcss": false,
-    "minified": false
+    "minified": false,
+    "ignoreHttpsCase": true,
+    "ignoreDomainNameCheck": true
   },
   "compileType": "miniprogram",
-  "srcMiniprogramRoot": "./src/"
+  "srcMiniprogramRoot": "./src/",
+  "condition": {}
 }
