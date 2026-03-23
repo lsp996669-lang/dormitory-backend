@@ -33,9 +33,9 @@ export default defineAppConfig({
       },
       {
         pagePath: 'pages/qrcode/index',
-        text: '二维码',
-        iconPath: './assets/tabbar/qr-code.png',
-        selectedIconPath: './assets/tabbar/qr-code-active.png',
+        text: '导出',
+        iconPath: './assets/tabbar/hard-drive-upload.png',
+        selectedIconPath: './assets/tabbar/hard-drive-upload-active.png',
       },
     ]
   }

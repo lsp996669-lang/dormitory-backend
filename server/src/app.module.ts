@@ -5,9 +5,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BedsModule } from './modules/beds/beds.module';
 import { CheckInModule } from './modules/checkin/checkin.module';
 import { CheckOutModule } from './modules/checkout/checkout.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
-  imports: [AuthModule, BedsModule, CheckInModule, CheckOutModule],
+  imports: [AuthModule, BedsModule, CheckInModule, CheckOutModule, ExportModule],
   controllers: [AppController],
   providers: [AppService],
 })

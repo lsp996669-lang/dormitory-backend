@@ -1,7 +1,7 @@
 export default typeof definePageConfig === 'function'
   ? definePageConfig({
-      navigationBarTitleText: '二维码',
+      navigationBarTitleText: '数据导出',
     })
   : {
-      navigationBarTitleText: '二维码',
+      navigationBarTitleText: '数据导出',
     }
