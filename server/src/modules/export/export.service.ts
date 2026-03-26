@@ -9,8 +9,7 @@ export class ExportService {
 
     const { data: checkIns, error } = await client
       .from('check_ins')
-      .select('*')
-      .order('check_in_time', { ascending: true });
+      .select('*');
 
     if (error) {
       console.error('获取入住记录失败:', error);
@@ -25,6 +24,9 @@ export class ExportService {
       .in('id', bedIds);
     
     const bedMap = new Map(beds?.map((b: any) => [b.id, b]));
+
+    // 按楼层、床号、铺位排序（楼层升序、床号升序、下铺在前）
+    const sortedRecords = this.sortByFloorAndBed(checkIns || [], bedMap);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = '宿舍管理系统';
@@ -55,7 +57,7 @@ export class ExportService {
     };
     headerRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 
-    checkIns?.forEach((record: any, index: number) => {
+    sortedRecords.forEach((record: any, index: number) => {
       const bed = bedMap.get(record.bed_id);
       worksheet.addRow({
         index: index + 1,
@@ -80,8 +82,7 @@ export class ExportService {
 
     const { data: checkOuts, error } = await client
       .from('check_outs')
-      .select('*')
-      .order('check_out_time', { ascending: false });
+      .select('*');
 
     if (error) {
       console.error('获取搬离记录失败:', error);
@@ -96,6 +97,9 @@ export class ExportService {
       .in('id', bedIds);
     
     const bedMap = new Map(beds?.map((b: any) => [b.id, b]));
+
+    // 按楼层、床号、铺位排序（楼层升序、床号升序、下铺在前）
+    const sortedRecords = this.sortByFloorAndBed(checkOuts || [], bedMap);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = '宿舍管理系统';
@@ -127,7 +131,7 @@ export class ExportService {
     };
     headerRow.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
 
-    checkOuts?.forEach((record: any, index: number) => {
+    sortedRecords.forEach((record: any, index: number) => {
       const bed = bedMap.get(record.bed_id);
       worksheet.addRow({
         index: index + 1,
@@ -153,13 +157,11 @@ export class ExportService {
 
     const { data: checkIns } = await client
       .from('check_ins')
-      .select('*')
-      .order('check_in_time', { ascending: true });
+      .select('*');
 
     const { data: checkOuts } = await client
       .from('check_outs')
-      .select('*')
-      .order('check_out_time', { ascending: false });
+      .select('*');
 
     // 获取所有涉及的床位
     const allBedIds = [
@@ -173,6 +175,10 @@ export class ExportService {
       .in('id', uniqueBedIds);
     
     const bedMap = new Map(beds?.map((b: any) => [b.id, b]));
+
+    // 排序数据
+    const sortedCheckIns = this.sortByFloorAndBed(checkIns || [], bedMap);
+    const sortedCheckOuts = this.sortByFloorAndBed(checkOuts || [], bedMap);
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = '宿舍管理系统';
@@ -195,7 +201,7 @@ export class ExportService {
     ];
 
     this.applyHeaderStyle(sheet1.getRow(1), 'FF4472C4');
-    checkIns?.forEach((record: any, index: number) => {
+    sortedCheckIns.forEach((record: any, index: number) => {
       const bed = bedMap.get(record.bed_id);
       sheet1.addRow({
         index: index + 1,
@@ -228,7 +234,7 @@ export class ExportService {
     ];
 
     this.applyHeaderStyle(sheet2.getRow(1), 'FF70AD47');
-    checkOuts?.forEach((record: any, index: number) => {
+    sortedCheckOuts.forEach((record: any, index: number) => {
       const bed = bedMap.get(record.bed_id);
       sheet2.addRow({
         index: index + 1,
@@ -339,6 +345,39 @@ export class ExportService {
         floorStats,
       },
     };
+  }
+
+  /**
+   * 按楼层、床号、铺位排序
+   * 排序规则：楼层升序 -> 床号升序 -> 下铺在前、上铺在后
+   */
+  private sortByFloorAndBed(records: any[], bedMap: Map<number, any>): any[] {
+    return [...records].sort((a, b) => {
+      const bedA = bedMap.get(a.bed_id) || {};
+      const bedB = bedMap.get(b.bed_id) || {};
+
+      // 1. 按楼层升序
+      const floorA = bedA.floor || 0;
+      const floorB = bedB.floor || 0;
+      if (floorA !== floorB) {
+        return floorA - floorB;
+      }
+
+      // 2. 按床号升序
+      const bedNumA = bedA.bed_number || 0;
+      const bedNumB = bedB.bed_number || 0;
+      if (bedNumA !== bedNumB) {
+        return bedNumA - bedNumB;
+      }
+
+      // 3. 按铺位排序：下铺(lower)在前，上铺(upper)在后
+      const posA = bedA.position || '';
+      const posB = bedB.position || '';
+      if (posA === 'lower' && posB === 'upper') return -1;
+      if (posA === 'upper' && posB === 'lower') return 1;
+
+      return 0;
+    });
   }
 
   private applyHeaderStyle(row: ExcelJS.Row, color: string) {
