@@ -86,6 +86,26 @@ export const checkOuts = pgTable(
 	]
 )
 
+// 点名记录表 - 记录每次点名情况
+export const rollCalls = pgTable(
+	"roll_calls",
+	{
+		id: serial().notNull().primaryKey(),
+		floor: integer("floor").notNull(), // 楼层
+		checkInId: integer("check_in_id").notNull(), // 关联入住记录
+		name: varchar("name", { length: 50 }).notNull(), // 姓名
+		status: varchar("status", { length: 20 }).default("present").notNull(), // present/absent 在场/缺席
+		remark: varchar("remark", { length: 200 }), // 备注
+		rollCallTime: timestamp("roll_call_time", { withTimezone: true, mode: 'string' }).defaultNow().notNull(), // 点名时间
+		createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	},
+	(table) => [
+		index("roll_calls_floor_idx").on(table.floor),
+		index("roll_calls_check_in_id_idx").on(table.checkInId),
+		index("roll_calls_roll_call_time_idx").on(table.rollCallTime),
+	]
+)
+
 // Zod schemas for validation
 const { createInsertSchema: createCoercedInsertSchema } = createSchemaFactory({
 	coerce: { date: true },
@@ -126,3 +146,5 @@ export type CheckIn = typeof checkIns.$inferSelect
 export type InsertCheckIn = z.infer<typeof insertCheckInSchema>
 
 export type CheckOut = typeof checkOuts.$inferSelect
+
+export type RollCall = typeof rollCalls.$inferSelect

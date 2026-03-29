@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2 } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -107,6 +107,12 @@ const FloorPage = () => {
   const handleFloorClick = (floor: number) => {
     Taro.navigateTo({
       url: `/pages/checkin/index?floor=${floor}`
+    })
+  }
+
+  const handleRollCallClick = (floor: number) => {
+    Taro.navigateTo({
+      url: `/pages/rollcall/index?floor=${floor}`
     })
   }
 
@@ -271,15 +277,26 @@ const FloorPage = () => {
                 </View>
               </CardHeader>
               <CardContent className="pt-0">
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => handleFloorClick(floor.floor)}
-                >
-                  <View className="flex items-center gap-2">
-                    <Bed size={18} color="#fff" />
-                    <Text className="text-white text-sm">入住登记</Text>
-                  </View>
-                </Button>
+                <View className="flex gap-2">
+                  <Button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => handleFloorClick(floor.floor)}
+                  >
+                    <View className="flex items-center gap-1">
+                      <Bed size={16} color="#fff" />
+                      <Text className="text-white text-sm">入住</Text>
+                    </View>
+                  </Button>
+                  <Button
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => handleRollCallClick(floor.floor)}
+                  >
+                    <View className="flex items-center gap-1">
+                      <ClipboardCheck size={16} color="#fff" />
+                      <Text className="text-white text-sm">点名</Text>
+                    </View>
+                  </Button>
+                </View>
               </CardContent>
             </Card>
           ))}

@@ -6,6 +6,7 @@ export default defineAppConfig({
     'pages/checkout/index',
     'pages/detail/index',
     'pages/qrcode/index',
+    'pages/rollcall/index',
   ],
   window: {
     backgroundTextStyle: 'light',
