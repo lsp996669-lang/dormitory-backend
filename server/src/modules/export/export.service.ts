@@ -25,7 +25,7 @@ export class ExportService {
     
     const bedMap = new Map(beds?.map((b: any) => [b.id, b]));
 
-    // 按楼层、床号、铺位排序（楼层升序、床号升序、下铺在前）
+    // 按楼层、床号、铺位排序
     const sortedRecords = this.sortByFloorAndBed(checkIns || [], bedMap);
 
     const workbook = new ExcelJS.Workbook();
@@ -98,7 +98,7 @@ export class ExportService {
     
     const bedMap = new Map(beds?.map((b: any) => [b.id, b]));
 
-    // 按楼层、床号、铺位排序（楼层升序、床号升序、下铺在前）
+    // 按楼层、床号、铺位排序
     const sortedRecords = this.sortByFloorAndBed(checkOuts || [], bedMap);
 
     const workbook = new ExcelJS.Workbook();
