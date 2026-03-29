@@ -1,6 +1,6 @@
 import { View, Text, Picker } from '@tarojs/components'
 import { useState } from 'react'
-import Taro, { useRouter, useDidShow } from '@tarojs/taro'
+import Taro, { useRouter, useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,14 +54,32 @@ const CheckInPage = () => {
     loadBeds()
   })
 
+  usePullDownRefresh(() => {
+    console.log('[CheckIn] 触发下拉刷新')
+    loadBeds().finally(() => {
+      Taro.stopPullDownRefresh()
+    })
+  })
+
   const loadBeds = async () => {
     setLoading(true)
     try {
+      console.log(`[CheckIn] 开始加载${floor}楼床位数据...`)
+      
       const res = await Network.request({
         url: '/api/beds/floor/' + floor
       })
 
-      console.log('床位数据响应:', res.data)
+      console.log('[CheckIn] 床位数据响应:', res)
+      console.log('[CheckIn] 响应状态码:', res.statusCode)
+      console.log('[CheckIn] 响应数据:', res.data)
+
+      if (res.statusCode !== 200) {
+        console.error('[CheckIn] 请求失败，状态码:', res.statusCode)
+        Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+        setBeds([])
+        return
+      }
 
       if (res.data?.code === 200 && res.data?.data) {
         // 转换字段名：蛇形命名 -> 驼峰命名
@@ -79,50 +97,17 @@ const CheckInPage = () => {
             checkInTime: bed.checkIn.check_in_time
           } : undefined
         }))
-        console.log('格式化后的床位数据:', formattedBeds)
+        console.log(`[CheckIn] 格式化后的床位数据: ${formattedBeds.length} 条`)
         setBeds(formattedBeds)
       } else {
-        // 如果后端未返回数据，生成默认床位
-        const defaultBeds: BedInfo[] = []
-        for (let i = 1; i <= 15; i++) {
-          defaultBeds.push({
-            id: (floor - 1) * 30 + (i - 1) * 2 + 1,
-            floor,
-            bedNumber: i,
-            position: 'upper',
-            status: 'empty'
-          })
-          defaultBeds.push({
-            id: (floor - 1) * 30 + (i - 1) * 2 + 2,
-            floor,
-            bedNumber: i,
-            position: 'lower',
-            status: 'empty'
-          })
-        }
-        setBeds(defaultBeds)
+        console.error('[CheckIn] 响应数据格式错误:', res.data)
+        Taro.showToast({ title: res.data?.msg || '数据加载失败', icon: 'none' })
+        setBeds([])
       }
     } catch (error) {
-      console.error('加载床位失败:', error)
-      // 生成默认床位
-      const defaultBeds: BedInfo[] = []
-      for (let i = 1; i <= 15; i++) {
-        defaultBeds.push({
-          id: (floor - 1) * 30 + (i - 1) * 2 + 1,
-          floor,
-          bedNumber: i,
-          position: 'upper',
-          status: 'empty'
-        })
-        defaultBeds.push({
-          id: (floor - 1) * 30 + (i - 1) * 2 + 2,
-          floor,
-          bedNumber: i,
-          position: 'lower',
-          status: 'empty'
-        })
-      }
-      setBeds(defaultBeds)
+      console.error('[CheckIn] 加载床位失败:', error)
+      Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
+      setBeds([])
     } finally {
       setLoading(false)
     }

@@ -88,6 +88,8 @@ export class BedsService implements OnModuleInit {
   async getBedsByFloor(floor: number) {
     const client = getSupabaseClient();
 
+    console.log(`[BedsService] 获取${floor}楼床位数据...`);
+
     // 获取该楼层的所有床位
     const { data: beds, error } = await client
       .from('beds')
@@ -97,19 +99,33 @@ export class BedsService implements OnModuleInit {
       .order('position', { ascending: true });
 
     if (error) {
-      console.error('获取床位失败:', error);
+      console.error('[BedsService] 获取床位失败:', error);
       throw new Error('获取床位失败');
     }
 
+    console.log(`[BedsService] 查询到 ${beds?.length || 0} 个床位`);
+
+    // 如果没有床位，直接返回空数组
+    if (!beds || beds.length === 0) {
+      return {
+        code: 200,
+        msg: '获取成功',
+        data: [],
+      };
+    }
+
     // 获取该楼层所有入住记录
+    const bedIds = beds.map(b => b.id);
     const { data: checkIns, error: checkInError } = await client
       .from('check_ins')
       .select('id, bed_id, name, id_card, phone, check_in_time')
-      .in('bed_id', beds?.map(b => b.id) || []);
+      .in('bed_id', bedIds);
 
     if (checkInError) {
-      console.error('获取入住记录失败:', checkInError);
+      console.error('[BedsService] 获取入住记录失败:', checkInError);
     }
+
+    console.log(`[BedsService] 查询到 ${checkIns?.length || 0} 条入住记录`);
 
     // 组装数据
     const bedsData = beds?.map(bed => {
@@ -119,6 +135,8 @@ export class BedsService implements OnModuleInit {
         checkIn: checkIn && bed.status === 'occupied' ? checkIn : null,
       };
     });
+
+    console.log(`[BedsService] 返回 ${bedsData?.length || 0} 条床位数据`);
 
     return {
       code: 200,

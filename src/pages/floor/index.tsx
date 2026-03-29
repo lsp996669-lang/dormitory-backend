@@ -1,6 +1,6 @@
 import { View, Text } from '@tarojs/components'
 import { useState } from 'react'
-import Taro, { useDidShow } from '@tarojs/taro'
+import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck } from 'lucide-react-taro'
@@ -38,6 +38,14 @@ const FloorPage = () => {
     loadNotificationCount()
   })
 
+  usePullDownRefresh(() => {
+    console.log('[Floor] 触发下拉刷新')
+    Promise.all([loadFloorStats(), loadNotificationCount()])
+      .finally(() => {
+        Taro.stopPullDownRefresh()
+      })
+  })
+
   const checkAuth = () => {
     const userInfo = Taro.getStorageSync('userInfo')
     if (!userInfo) {
@@ -48,30 +56,36 @@ const FloorPage = () => {
   const loadFloorStats = async () => {
     setLoading(true)
     try {
+      console.log('[Floor] 开始加载楼层统计数据...')
+      
       const res = await Network.request({
         url: '/api/floors/stats'
       })
 
-      console.log('楼层统计响应:', res.data)
+      console.log('[Floor] 楼层统计响应:', res)
+      console.log('[Floor] 响应状态码:', res.statusCode)
+      console.log('[Floor] 响应数据:', res.data)
+
+      if (res.statusCode !== 200) {
+        console.error('[Floor] 请求失败，状态码:', res.statusCode)
+        Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+        setFloorStats([])
+        return
+      }
 
       if (res.data?.code === 200 && res.data?.data) {
         // 过滤掉1楼，只显示2-4楼
         const floors = res.data.data.filter((f: FloorStats) => f.floor >= 2)
+        console.log(`[Floor] 过滤后的楼层数据: ${floors.length} 个楼层`)
         setFloorStats(floors)
       } else {
-        setFloorStats([
-          { floor: 2, totalBeds: 30, occupiedBeds: 0, emptyBeds: 30 },
-          { floor: 3, totalBeds: 30, occupiedBeds: 0, emptyBeds: 30 },
-          { floor: 4, totalBeds: 30, occupiedBeds: 0, emptyBeds: 30 },
-        ])
+        console.error('[Floor] 响应数据格式错误:', res.data)
+        setFloorStats([])
       }
     } catch (error) {
-      console.error('加载楼层统计失败:', error)
-      setFloorStats([
-        { floor: 2, totalBeds: 30, occupiedBeds: 0, emptyBeds: 30 },
-        { floor: 3, totalBeds: 30, occupiedBeds: 0, emptyBeds: 30 },
-        { floor: 4, totalBeds: 30, occupiedBeds: 0, emptyBeds: 30 },
-      ])
+      console.error('[Floor] 加载楼层统计失败:', error)
+      Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
+      setFloorStats([])
     } finally {
       setLoading(false)
     }
