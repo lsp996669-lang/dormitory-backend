@@ -2,7 +2,6 @@ import { Controller, Post, Body, Get, Query, Res, UseInterceptors, UploadedFile 
 import { Response } from 'express';
 import { ImportService } from './import.service';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { HeaderUtils } from 'coze-coding-dev-sdk';
 
 @Controller('import')
 export class ImportController {
@@ -67,7 +66,8 @@ export class ImportController {
         });
       }
 
-      const result = await this.importService.importFromBuffer(buffer);
+      // 直接调用 parseAndImport 处理 buffer
+      const result = await this.importService.parseAndImport(buffer);
       
       return res.json({
         code: 200,
@@ -79,62 +79,6 @@ export class ImportController {
       return res.json({
         code: 500,
         msg: error.message || '导入失败',
-        data: null,
-      });
-    }
-  }
-
-  /**
-   * 预览导入数据
-   */
-  @Get('preview')
-  async previewImport(
-    @Query('url') url: string,
-    @Res() res: Response,
-  ) {
-    console.log('[ImportController] 预览导入数据');
-
-    try {
-      const rows = await this.importService.previewFromUrl(url);
-      
-      return res.json({
-        code: 200,
-        msg: '预览成功',
-        data: {
-          total: rows.length,
-          rows: rows.slice(0, 20), // 只返回前20行预览
-        },
-      });
-    } catch (error: any) {
-      console.error('[ImportController] 预览失败:', error);
-      return res.json({
-        code: 500,
-        msg: error.message || '预览失败',
-        data: null,
-      });
-    }
-  }
-
-  /**
-   * 清空所有数据
-   */
-  @Post('clear')
-  async clearData(@Res() res: Response) {
-    console.log('[ImportController] 清空数据');
-
-    try {
-      await this.importService.clearAllData();
-      
-      return res.json({
-        code: 200,
-        msg: '数据已清空',
-        data: null,
-      });
-    } catch (error: any) {
-      console.error('[ImportController] 清空失败:', error);
-      return res.json({
-        code: 500,
-        msg: error.message || '清空失败',
         data: null,
       });
     }

@@ -3,27 +3,25 @@ import { useState } from 'react'
 import Taro from '@tarojs/taro'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Upload, FileSpreadsheet, CircleCheck, CircleX, CircleAlert, Trash2 } from 'lucide-react-taro'
+import { Upload, FileSpreadsheet, CircleCheck, CircleX, CircleAlert } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
 interface ImportResult {
-  total: number
-  success: number
-  failed: number
+  checkIns: number
+  checkOuts: number
   errors: string[]
 }
 
 const ImportPage = () => {
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
-  const [clearing, setClearing] = useState(false)
 
   // 从URL导入默认文件
   const handleImportFromUrl = async () => {
     const confirmed = await Taro.showModal({
       title: '确认导入',
-      content: '确定要从默认文件导入数据吗？\n这将添加新的入住记录。',
+      content: '确定要从Excel文件导入数据吗？\n\n这将清空现有数据并导入新数据。',
     })
     
     if (!confirmed.confirm) return
@@ -32,8 +30,8 @@ const ImportPage = () => {
     setResult(null)
 
     try {
-      // 默认的Excel文件URL（从用户提供的URL）
-      const fileUrl = 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F2_%E5%8D%97%E5%9B%9B%E5%B7%B7%E4%BD%8F%E5%AE%BF%E4%BA%BA%E5%91%98%E5%90%8D%E5%8D%953%E6%9C%8821%E5%8F%B7%283%29.xlsx&nonce=8ffc5d2c-5c3c-4333-b05b-939a58b9b99c&project_id=7619391393189953536&sign=8901d10187e045d66a85d87ad377927a4c1e1edbee16b6b2d50e9c6a7cacde81'
+      // 默认的Excel文件URL
+      const fileUrl = 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F2_%E5%8D%97%E5%9B%9B%E5%B7%B7%E4%BD%8F%E5%AE%BF%E4%BA%BA%E5%91%98%E5%90%8D%E5%8D%953%E6%9C%8821%E5%8F%B7%283%29.xlsx&nonce=d6f3ab6e-615c-4637-8882-040fabe8902f&project_id=7619391393189953536&sign=d6f2de406cca8bba1b6f4870fdefd2b488015cbdae5f97372e2d36418b2bde9b'
 
       Taro.showLoading({ title: '正在导入...', mask: true })
 
@@ -50,10 +48,11 @@ const ImportPage = () => {
       if (res.data?.code === 200 && res.data?.data) {
         setResult(res.data.data)
         
-        if (res.data.data.success > 0) {
+        if (res.data.data.checkIns > 0 || res.data.data.checkOuts > 0) {
           Taro.showToast({
-            title: `成功导入 ${res.data.data.success} 条`,
-            icon: 'success'
+            title: `入住${res.data.data.checkIns}人，搬离${res.data.data.checkOuts}人`,
+            icon: 'success',
+            duration: 3000
           })
         }
       } else {
@@ -110,10 +109,11 @@ const ImportPage = () => {
         if (data.code === 200 && data.data) {
           setResult(data.data)
           
-          if (data.data.success > 0) {
+          if (data.data.checkIns > 0 || data.data.checkOuts > 0) {
             Taro.showToast({
-              title: `成功导入 ${data.data.success} 条`,
-              icon: 'success'
+              title: `入住${data.data.checkIns}人，搬离${data.data.checkOuts}人`,
+              icon: 'success',
+              duration: 3000
             })
           }
         } else {
@@ -135,74 +135,11 @@ const ImportPage = () => {
     }
   }
 
-  // 清空所有数据
-  const handleClearData = async () => {
-    const confirmed = await Taro.showModal({
-      title: '危险操作',
-      content: '确定要清空所有数据吗？\n\n这将删除所有入住、搬离记录，并重置所有床位状态。\n\n此操作不可恢复！',
-      confirmText: '确认清空',
-      confirmColor: '#ef4444'
-    })
-
-    if (!confirmed.confirm) return
-
-    // 二次确认
-    const confirmed2 = await Taro.showModal({
-      title: '最后确认',
-      content: '真的要清空所有数据吗？',
-      confirmText: '确认',
-      confirmColor: '#ef4444'
-    })
-
-    if (!confirmed2.confirm) return
-
-    setClearing(true)
-
-    try {
-      Taro.showLoading({ title: '正在清空...', mask: true })
-
-      const res = await Network.request({
-        url: '/api/import/clear',
-        method: 'POST'
-      })
-
-      Taro.hideLoading()
-
-      if (res.data?.code === 200) {
-        Taro.showToast({
-          title: '数据已清空',
-          icon: 'success'
-        })
-        
-        // 清空本地缓存
-        Taro.removeStorageSync('floorStats')
-        for (let i = 1; i <= 4; i++) {
-          Taro.removeStorageSync(`beds_floor_${i}`)
-        }
-        Taro.removeStorageSync('checkOutRecords')
-        
-        setResult(null)
-      } else {
-        throw new Error(res.data?.msg || '清空失败')
-      }
-    } catch (error: any) {
-      Taro.hideLoading()
-      console.error('[Import] 清空失败:', error)
-      Taro.showToast({
-        title: error.message || '清空失败',
-        icon: 'none',
-        duration: 3000
-      })
-    } finally {
-      setClearing(false)
-    }
-  }
-
   return (
     <View className="min-h-screen bg-gray-50 p-4">
       <View className="text-center mb-6">
         <Text className="text-xl font-bold text-gray-800 block">数据导入</Text>
-        <Text className="text-sm text-gray-500 block mt-1">从Excel文件导入入住人员数据</Text>
+        <Text className="text-sm text-gray-500 block mt-1">从Excel文件导入入住和搬离人员数据</Text>
       </View>
 
       {/* 导入方式卡片 */}
@@ -216,13 +153,13 @@ const ImportPage = () => {
               </View>
               <View className="flex-1">
                 <Text className="text-sm font-medium text-gray-800">南四巷住宿名单</Text>
-                <Text className="text-xs text-gray-500">从预设文件导入数据</Text>
+                <Text className="text-xs text-gray-500">导入预设Excel文件数据</Text>
               </View>
             </View>
             <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleImportFromUrl}
-              disabled={importing || clearing}
+              disabled={importing}
             >
               <View className="flex items-center justify-center gap-2">
                 <Upload size={16} color="#fff" />
@@ -249,38 +186,11 @@ const ImportPage = () => {
             <Button
               className="w-full bg-green-600 hover:bg-green-700 text-white"
               onClick={handleUploadFile}
-              disabled={importing || clearing}
+              disabled={importing}
             >
               <View className="flex items-center justify-center gap-2">
                 <Upload size={16} color="#fff" />
                 <Text className="text-white">选择文件</Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 清空数据 */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-4">
-            <View className="flex items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                <Trash2 size={20} color="#ef4444" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">清空数据</Text>
-                <Text className="text-xs text-gray-500">删除所有记录，重置床位</Text>
-              </View>
-            </View>
-            <Button
-              className="w-full bg-red-600 hover:bg-red-700 text-white"
-              onClick={handleClearData}
-              disabled={importing || clearing}
-            >
-              <View className="flex items-center justify-center gap-2">
-                <Trash2 size={16} color="#fff" />
-                <Text className="text-white">
-                  {clearing ? '清空中...' : '清空数据'}
-                </Text>
               </View>
             </Button>
           </CardContent>
@@ -292,9 +202,9 @@ const ImportPage = () => {
         <Card className="overflow-hidden mt-4">
           <CardContent className="p-4">
             <View className="flex items-center gap-2 mb-3">
-              {result.failed === 0 ? (
+              {result.errors.length === 0 ? (
                 <CircleCheck size={20} color="#22c55e" />
-              ) : result.success === 0 ? (
+              ) : result.checkIns === 0 && result.checkOuts === 0 ? (
                 <CircleX size={20} color="#ef4444" />
               ) : (
                 <CircleAlert size={20} color="#f97316" />
@@ -304,16 +214,12 @@ const ImportPage = () => {
 
             <View className="space-y-2">
               <View className="flex justify-between items-center py-2 border-b border-gray-100">
-                <Text className="text-sm text-gray-600">总计</Text>
-                <Text className="text-sm font-medium text-gray-800">{result.total} 条</Text>
+                <Text className="text-sm text-gray-600">入住人员</Text>
+                <Text className="text-sm font-medium text-blue-600">{result.checkIns} 人</Text>
               </View>
               <View className="flex justify-between items-center py-2 border-b border-gray-100">
-                <Text className="text-sm text-gray-600">成功</Text>
-                <Text className="text-sm font-medium text-green-600">{result.success} 条</Text>
-              </View>
-              <View className="flex justify-between items-center py-2 border-b border-gray-100">
-                <Text className="text-sm text-gray-600">失败</Text>
-                <Text className="text-sm font-medium text-red-600">{result.failed} 条</Text>
+                <Text className="text-sm text-gray-600">搬离人员</Text>
+                <Text className="text-sm font-medium text-green-600">{result.checkOuts} 人</Text>
               </View>
             </View>
 
@@ -337,12 +243,12 @@ const ImportPage = () => {
       {/* 使用说明 */}
       <Card className="overflow-hidden mt-4">
         <CardContent className="p-4">
-          <Text className="text-sm font-medium text-gray-800 block mb-2">Excel格式要求</Text>
+          <Text className="text-sm font-medium text-gray-800 block mb-2">导入说明</Text>
           <View className="space-y-1">
-            <Text className="text-xs text-gray-500 block">• 第一行为表头</Text>
-            <Text className="text-xs text-gray-500 block">• 必须包含：姓名、身份证号、手机号</Text>
-            <Text className="text-xs text-gray-500 block">• 可选列：楼层、床号、铺位、入住日期</Text>
-            <Text className="text-xs text-gray-500 block">• 铺位：上铺/下铺</Text>
+            <Text className="text-xs text-gray-500 block">• 导入前会清空现有数据</Text>
+            <Text className="text-xs text-gray-500 block">• 每个工作表代表一个楼层</Text>
+            <Text className="text-xs text-gray-500 block">• 自动识别入住人员和搬离人员</Text>
+            <Text className="text-xs text-gray-500 block">• 支持xlsx和xls格式</Text>
           </View>
         </CardContent>
       </Card>
