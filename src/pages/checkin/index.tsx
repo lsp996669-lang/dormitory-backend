@@ -76,8 +76,17 @@ const CheckInPage = () => {
 
       if (res.statusCode !== 200) {
         console.error('[CheckIn] 请求失败，状态码:', res.statusCode)
-        Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
-        setBeds([])
+        // 尝试从本地缓存加载
+        const cacheKey = `beds_floor_${floor}`
+        const cachedData = Taro.getStorageSync(cacheKey)
+        if (cachedData && cachedData.length > 0) {
+          console.log('[CheckIn] 使用本地缓存数据')
+          setBeds(cachedData)
+          Taro.showToast({ title: '使用离线数据', icon: 'none' })
+        } else {
+          Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+          setBeds([])
+        }
         return
       }
 
@@ -99,15 +108,36 @@ const CheckInPage = () => {
         }))
         console.log(`[CheckIn] 格式化后的床位数据: ${formattedBeds.length} 条`)
         setBeds(formattedBeds)
+        // 保存到本地缓存
+        const cacheKey = `beds_floor_${floor}`
+        Taro.setStorageSync(cacheKey, formattedBeds)
+        console.log('[CheckIn] 数据已缓存到本地:', cacheKey)
       } else {
         console.error('[CheckIn] 响应数据格式错误:', res.data)
-        Taro.showToast({ title: res.data?.msg || '数据加载失败', icon: 'none' })
-        setBeds([])
+        // 尝试从本地缓存加载
+        const cacheKey = `beds_floor_${floor}`
+        const cachedData = Taro.getStorageSync(cacheKey)
+        if (cachedData && cachedData.length > 0) {
+          console.log('[CheckIn] 使用本地缓存数据')
+          setBeds(cachedData)
+        } else {
+          Taro.showToast({ title: res.data?.msg || '数据加载失败', icon: 'none' })
+          setBeds([])
+        }
       }
     } catch (error) {
       console.error('[CheckIn] 加载床位失败:', error)
-      Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
-      setBeds([])
+      // 尝试从本地缓存加载
+      const cacheKey = `beds_floor_${floor}`
+      const cachedData = Taro.getStorageSync(cacheKey)
+      if (cachedData && cachedData.length > 0) {
+        console.log('[CheckIn] 网络错误，使用本地缓存数据')
+        setBeds(cachedData)
+        Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
+      } else {
+        Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
+        setBeds([])
+      }
     } finally {
       setLoading(false)
     }

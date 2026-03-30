@@ -42,7 +42,7 @@ const CheckOutPage = () => {
         url: '/api/checkout/list'
       })
 
-      console.log('搬离记录响应:', res.data)
+      console.log('[CheckOut] 搬离记录响应:', res.data)
 
       if (res.data?.code === 200 && res.data?.data) {
         // 后端已返回驼峰命名，直接使用
@@ -60,12 +60,31 @@ const CheckOutPage = () => {
           position: record.position
         }))
         setRecords(formattedRecords)
+        // 保存到本地缓存
+        Taro.setStorageSync('checkOutRecords', formattedRecords)
+        console.log('[CheckOut] 数据已缓存到本地')
+      } else {
+        // 尝试从本地缓存加载
+        const cachedData = Taro.getStorageSync('checkOutRecords')
+        if (cachedData && cachedData.length > 0) {
+          console.log('[CheckOut] 使用本地缓存数据')
+          setRecords(cachedData)
+          Taro.showToast({ title: '使用离线数据', icon: 'none' })
+        } else {
+          setRecords([])
+        }
+      }
+    } catch (error) {
+      console.error('[CheckOut] 加载搬离记录失败:', error)
+      // 尝试从本地缓存加载
+      const cachedData = Taro.getStorageSync('checkOutRecords')
+      if (cachedData && cachedData.length > 0) {
+        console.log('[CheckOut] 网络错误，使用本地缓存数据')
+        setRecords(cachedData)
+        Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
       } else {
         setRecords([])
       }
-    } catch (error) {
-      console.error('加载搬离记录失败:', error)
-      setRecords([])
     } finally {
       setLoading(false)
     }

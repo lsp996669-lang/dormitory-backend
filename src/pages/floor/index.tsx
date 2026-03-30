@@ -68,8 +68,16 @@ const FloorPage = () => {
 
       if (res.statusCode !== 200) {
         console.error('[Floor] 请求失败，状态码:', res.statusCode)
-        Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
-        setFloorStats([])
+        // 尝试从本地缓存加载
+        const cachedData = Taro.getStorageSync('floorStats')
+        if (cachedData && cachedData.length > 0) {
+          console.log('[Floor] 使用本地缓存数据')
+          setFloorStats(cachedData)
+          Taro.showToast({ title: '使用离线数据', icon: 'none' })
+        } else {
+          Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+          setFloorStats([])
+        }
         return
       }
 
@@ -78,14 +86,32 @@ const FloorPage = () => {
         const floors = res.data.data.filter((f: FloorStats) => f.floor >= 2)
         console.log(`[Floor] 过滤后的楼层数据: ${floors.length} 个楼层`)
         setFloorStats(floors)
+        // 保存到本地缓存
+        Taro.setStorageSync('floorStats', floors)
+        console.log('[Floor] 数据已缓存到本地')
       } else {
         console.error('[Floor] 响应数据格式错误:', res.data)
-        setFloorStats([])
+        // 尝试从本地缓存加载
+        const cachedData = Taro.getStorageSync('floorStats')
+        if (cachedData && cachedData.length > 0) {
+          console.log('[Floor] 使用本地缓存数据')
+          setFloorStats(cachedData)
+        } else {
+          setFloorStats([])
+        }
       }
     } catch (error) {
       console.error('[Floor] 加载楼层统计失败:', error)
-      Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
-      setFloorStats([])
+      // 尝试从本地缓存加载
+      const cachedData = Taro.getStorageSync('floorStats')
+      if (cachedData && cachedData.length > 0) {
+        console.log('[Floor] 网络错误，使用本地缓存数据')
+        setFloorStats(cachedData)
+        Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
+      } else {
+        Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
+        setFloorStats([])
+      }
     } finally {
       setLoading(false)
     }

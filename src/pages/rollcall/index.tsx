@@ -62,19 +62,41 @@ const RollCallPage = () => {
         })
       ])
 
-      console.log('点名列表响应:', listRes.data)
-      console.log('点名统计响应:', statsRes.data)
+      console.log('[RollCall] 点名列表响应:', listRes.data)
+      console.log('[RollCall] 点名统计响应:', statsRes.data)
 
       if (listRes.data?.code === 200 && listRes.data?.data) {
         setRollCallList(listRes.data.data)
+        // 保存到本地缓存
+        const cacheKey = `rollcall_${floor}_${selectedDate}`
+        Taro.setStorageSync(cacheKey, listRes.data.data)
+        console.log('[RollCall] 数据已缓存到本地:', cacheKey)
       }
 
       if (statsRes.data?.code === 200 && statsRes.data?.data) {
         setStats(statsRes.data.data)
+        // 保存统计到本地缓存
+        const statsCacheKey = `rollcall_stats_${floor}_${selectedDate}`
+        Taro.setStorageSync(statsCacheKey, statsRes.data.data)
       }
     } catch (error) {
-      console.error('加载点名数据失败:', error)
-      Taro.showToast({ title: '加载失败', icon: 'none' })
+      console.error('[RollCall] 加载点名数据失败:', error)
+      // 尝试从本地缓存加载
+      const cacheKey = `rollcall_${floor}_${selectedDate}`
+      const statsCacheKey = `rollcall_stats_${floor}_${selectedDate}`
+      const cachedList = Taro.getStorageSync(cacheKey)
+      const cachedStats = Taro.getStorageSync(statsCacheKey)
+      
+      if (cachedList && cachedList.length > 0) {
+        console.log('[RollCall] 使用本地缓存数据')
+        setRollCallList(cachedList)
+        if (cachedStats) {
+          setStats(cachedStats)
+        }
+        Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
+      } else {
+        Taro.showToast({ title: '加载失败，请检查网络连接', icon: 'none' })
+      }
     } finally {
       setLoading(false)
     }
