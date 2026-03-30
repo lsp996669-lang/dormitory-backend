@@ -8,9 +8,10 @@ import { CheckOutModule } from './modules/checkout/checkout.module';
 import { ExportModule } from './modules/export/export.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { RollCallModule } from './modules/rollcall/rollcall.module';
+import { ImportModule } from './modules/import/import.module';
 
 @Module({
-  imports: [AuthModule, BedsModule, CheckInModule, CheckOutModule, ExportModule, NotificationModule, RollCallModule],
+  imports: [AuthModule, BedsModule, CheckInModule, CheckOutModule, ExportModule, NotificationModule, RollCallModule, ImportModule],
   controllers: [AppController],
   providers: [AppService],
 })

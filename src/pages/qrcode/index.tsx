@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Download, Users, UserMinus, FileSpreadsheet, Building, RefreshCw, FolderOpen } from 'lucide-react-taro'
+import { Download, Users, UserMinus, FileSpreadsheet, Building, RefreshCw, FolderOpen, Upload } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -321,6 +321,30 @@ const ExportPage = () => {
                 <Text className="text-white">
                   {exporting === 'all' ? '导出中...' : '导出Excel'}
                 </Text>
+              </View>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* 数据导入 */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-4">
+            <View className="flex items-center gap-3 mb-3">
+              <View className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <Upload size={20} color="#f97316" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-gray-800">数据导入</Text>
+                <Text className="text-xs text-gray-500">从Excel文件导入入住人员</Text>
+              </View>
+            </View>
+            <Button
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={() => Taro.navigateTo({ url: '/pages/import/index' })}
+            >
+              <View className="flex items-center justify-center gap-2">
+                <Upload size={16} color="#fff" />
+                <Text className="text-white">进入导入</Text>
               </View>
             </Button>
           </CardContent>
