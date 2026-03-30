@@ -42,6 +42,30 @@ export class ImportService {
   }
 
   /**
+   * 从Buffer导入Excel数据（用于文件上传）
+   */
+  async importFromBuffer(buffer: Buffer): Promise<ImportResult> {
+    console.log('[Import] 开始从Buffer导入, 大小:', buffer.length);
+
+    try {
+      // 1. 清空现有数据
+      await this.clearAllData();
+
+      // 2. 确保床位存在
+      await this.ensureBeds();
+
+      // 3. 解析并导入数据
+      const result = await this.parseAndImport(buffer);
+      console.log('[Import] 导入完成:', result);
+
+      return result;
+    } catch (error) {
+      console.error('[Import] 导入失败:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 下载文件
    */
   private downloadFile(url: string): Promise<Buffer> {
@@ -167,10 +191,10 @@ export class ImportService {
             }
           }
 
-          // 处理搬离人员（H、I、J列）
-          const checkOutName = this.getCellValue(row.getCell(8)); // H列：搬走人员
-          const checkOutCheckInDate = this.getCellValue(row.getCell(9)); // I列：搬走人员入住日期
-          const checkOutDate = this.getCellValue(row.getCell(10)); // J列：搬走日期
+          // 处理搬离人员（I、J、K列）
+          const checkOutName = this.getCellValue(row.getCell(9)); // I列：搬走人员
+          const checkOutCheckInDate = this.getCellValue(row.getCell(10)); // J列：搬走人员入住日期
+          const checkOutDate = this.getCellValue(row.getCell(11)); // K列：搬走日期
 
           // 调试日志
           if (checkOutName) {

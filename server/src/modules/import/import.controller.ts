@@ -66,8 +66,8 @@ export class ImportController {
         });
       }
 
-      // 直接调用 parseAndImport 处理 buffer
-      const result = await this.importService.parseAndImport(buffer);
+      // 调用完整的导入流程（包含清空数据和确保床位存在）
+      const result = await this.importService.importFromBuffer(buffer);
       
       return res.json({
         code: 200,
