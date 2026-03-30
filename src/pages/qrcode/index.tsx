@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Download, Users, UserMinus, FileSpreadsheet, Building, RefreshCw, FolderOpen, Upload } from 'lucide-react-taro'
+import { Download, Users, UserMinus, FileSpreadsheet, Building, RefreshCw, FolderOpen, Upload, Save } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -190,6 +190,35 @@ const ExportPage = () => {
         <Text className="text-xl font-bold text-gray-800 block">数据导出</Text>
         <Text className="text-sm text-gray-500 block mt-1">导出宿舍管理数据到Excel</Text>
       </View>
+
+      {/* 快捷保存按钮 */}
+      <Card className="overflow-hidden mb-4 border-2 border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <View className="flex items-center justify-between">
+            <View className="flex items-center gap-3">
+              <View className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                <Save size={24} color="#fff" />
+              </View>
+              <View>
+                <Text className="text-base font-semibold text-gray-800">保存全部数据</Text>
+                <Text className="text-xs text-gray-500">一键导出入住+搬离人员信息</Text>
+              </View>
+            </View>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+              onClick={() => handleExport('all')}
+              disabled={exporting !== null}
+            >
+              <View className="flex items-center justify-center gap-2">
+                <Download size={16} color="#fff" />
+                <Text className="text-white font-medium">
+                  {exporting === 'all' ? '保存中...' : '保存'}
+                </Text>
+              </View>
+            </Button>
+          </View>
+        </CardContent>
+      </Card>
 
       {/* 统计卡片 */}
       <Card className="overflow-hidden mb-4">
