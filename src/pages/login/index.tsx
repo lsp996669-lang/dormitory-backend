@@ -159,9 +159,7 @@ const LoginPage = () => {
             </View>
           </Button>
           <Text className="block text-center text-xs text-gray-400 mt-3">
-            {Taro.getEnv() === Taro.ENV_TYPE.WEAPP 
-              ? '点击按钮使用微信登录' 
-              : '开发环境：点击按钮模拟登录'}
+            点击按钮使用微信授权登录
           </Text>
         </CardContent>
       </Card>
