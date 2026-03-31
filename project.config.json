@@ -2,7 +2,7 @@
   "miniprogramRoot": "./dist-weapp",
   "projectname": "宿舍管理助手",
   "description": "宿舍管理助手 - 企业内部宿舍入住与搬离管理系统",
-  "appid": "touristappid",
+  "appid": "wxeb1d51afc9237cda",
   "setting": {
     "urlCheck": true,
     "es6": false,
