@@ -1,9 +1,9 @@
 import { View, Text } from '@tarojs/components'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -31,6 +31,31 @@ const FloorPage = () => {
   const [notificationCount, setNotificationCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
+
+  // 检查服务器状态
+  const checkServerStatus = async () => {
+    try {
+      const res = await Network.request({
+        url: '/api/export/stats',
+        method: 'GET',
+      })
+      if (res.statusCode === 200) {
+        setServerStatus('online')
+      } else {
+        setServerStatus('offline')
+      }
+    } catch (error) {
+      setServerStatus('offline')
+    }
+  }
+
+  // 定时检查服务器状态
+  useEffect(() => {
+    checkServerStatus()
+    const timer = setInterval(checkServerStatus, 60000) // 每分钟检查一次
+    return () => clearInterval(timer)
+  }, [])
 
   useDidShow(() => {
     checkAuth()
@@ -213,10 +238,63 @@ const FloorPage = () => {
 
   return (
     <View className="min-h-screen bg-gray-50 p-4">
-      <View className="mb-6">
-        <Text className="text-2xl font-bold text-gray-800 block">宿舍管理</Text>
-        <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住登记，点击已入住床位可搬离</Text>
+      <View className="mb-4">
+        <View className="flex items-center justify-between">
+          <View>
+            <Text className="text-2xl font-bold text-gray-800 block">宿舍管理</Text>
+            <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住登记</Text>
+          </View>
+          {/* 服务状态指示器 */}
+          <View 
+            className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
+            style={{ backgroundColor: serverStatus === 'online' ? '#dcfce7' : serverStatus === 'offline' ? '#fee2e2' : '#fef3c7' }}
+            onClick={checkServerStatus}
+          >
+            {serverStatus === 'online' ? (
+              <>
+                <Wifi size={16} color="#16a34a" />
+                <Text className="text-xs" style={{ color: '#16a34a' }}>服务正常</Text>
+              </>
+            ) : serverStatus === 'offline' ? (
+              <>
+                <WifiOff size={16} color="#dc2626" />
+                <Text className="text-xs" style={{ color: '#dc2626' }}>服务离线</Text>
+              </>
+            ) : (
+              <>
+                <RefreshCw size={16} color="#d97706" className="animate-spin" />
+                <Text className="text-xs" style={{ color: '#d97706' }}>检测中...</Text>
+              </>
+            )}
+          </View>
+        </View>
       </View>
+
+      {/* 服务离线提示 */}
+      {serverStatus === 'offline' && (
+        <Card className="overflow-hidden mb-4 border-2 border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <View className="flex items-center gap-3">
+              <View className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <WifiOff size={20} color="#dc2626" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-red-800">后端服务已断开</Text>
+                <Text className="text-xs text-red-600 mt-1">
+                  请保持开发网页打开，或刷新此页面重新连接
+                </Text>
+              </View>
+              <Button
+                size="sm"
+                className="bg-red-600 text-white"
+                onClick={checkServerStatus}
+              >
+                <RefreshCw size={14} color="#fff" />
+              </Button>
+            </View>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 系统通知卡片 */}
       <Card className="overflow-hidden mb-4">
