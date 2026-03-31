@@ -52,8 +52,11 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react-taro": "^1.3.0",
+    "nanoid": "^5.1.7",
+    "picocolors": "^1.1.1",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "source-map-js": "^1.2.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.9"
