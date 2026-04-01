@@ -121,13 +121,14 @@ export class BedsService implements OnModuleInit {
   async getBedsByFloor(floor: number) {
     const client = getSupabaseClient();
 
-    console.log(`[BedsService] 获取${floor}楼床位数据...`);
+    console.log(`[BedsService] 获取南四巷${floor}楼床位数据...`);
 
-    // 获取该楼层的所有床位
+    // 获取该楼层的所有床位（仅南四巷）
     const { data: beds, error } = await client
       .from('beds')
       .select('*')
       .eq('floor', floor)
+      .eq('dormitory', 'nansi')
       .order('bed_number', { ascending: true })
       .order('position', { ascending: true });
 
@@ -191,7 +192,8 @@ export class BedsService implements OnModuleInit {
       const { data: beds, error } = await client
         .from('beds')
         .select('status')
-        .eq('floor', floor);
+        .eq('floor', floor)
+        .eq('dormitory', 'nansi');
 
       if (error) {
         console.error(`获取${floor}楼统计失败:`, error);
