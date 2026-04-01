@@ -44,6 +44,8 @@ interface BedInfo {
   bedNumber: number
   position: string
   status: string
+  room?: string
+  dormitory?: string
   checkIn?: {
     id: number
     name: string
@@ -55,8 +57,9 @@ interface BedInfo {
 
 const CheckInPage = () => {
   const router = useRouter()
-  const { floor: floorParam } = router.params
+  const { floor: floorParam, dormitory, room } = router.params
   const floor = parseInt(floorParam || '1', 10)
+  const isNanTwo = dormitory === 'nanTwo'
 
   const [beds, setBeds] = useState<BedInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -85,11 +88,18 @@ const CheckInPage = () => {
   const loadBeds = async () => {
     setLoading(true)
     try {
-      console.log(`[CheckIn] 开始加载${floor}楼床位数据...`)
+      let url = '/api/beds/floor/' + floor
+      let cacheKey = `beds_floor_${floor}`
       
-      const res = await Network.request({
-        url: '/api/beds/floor/' + floor
-      })
+      // 南二巷宿舍使用不同的API
+      if (isNanTwo && room) {
+        url = `/api/beds/nantwo/floor/${floor}/room/${room}`
+        cacheKey = `beds_nantwo_${floor}_${room}`
+      }
+
+      console.log(`[CheckIn] 开始加载床位数据，URL: ${url}`)
+      
+      const res = await Network.request({ url })
 
       console.log('[CheckIn] 床位数据响应:', res)
       console.log('[CheckIn] 响应状态码:', res.statusCode)
@@ -98,7 +108,6 @@ const CheckInPage = () => {
       if (res.statusCode !== 200) {
         console.error('[CheckIn] 请求失败，状态码:', res.statusCode)
         // 尝试从本地缓存加载
-        const cacheKey = `beds_floor_${floor}`
         const cachedData = Taro.getStorageSync(cacheKey)
         if (cachedData && cachedData.length > 0) {
           console.log('[CheckIn] 使用本地缓存数据')
@@ -119,6 +128,8 @@ const CheckInPage = () => {
           bedNumber: bed.bed_number,
           position: bed.position,
           status: bed.status,
+          room: bed.room,
+          dormitory: bed.dormitory,
           checkIn: bed.checkIn ? {
             id: bed.checkIn.id,
             name: bed.checkIn.name,
@@ -130,13 +141,11 @@ const CheckInPage = () => {
         console.log(`[CheckIn] 格式化后的床位数据: ${formattedBeds.length} 条`)
         setBeds(formattedBeds)
         // 保存到本地缓存
-        const cacheKey = `beds_floor_${floor}`
         Taro.setStorageSync(cacheKey, formattedBeds)
         console.log('[CheckIn] 数据已缓存到本地:', cacheKey)
       } else {
         console.error('[CheckIn] 响应数据格式错误:', res.data)
         // 尝试从本地缓存加载
-        const cacheKey = `beds_floor_${floor}`
         const cachedData = Taro.getStorageSync(cacheKey)
         if (cachedData && cachedData.length > 0) {
           console.log('[CheckIn] 使用本地缓存数据')
@@ -149,7 +158,7 @@ const CheckInPage = () => {
     } catch (error) {
       console.error('[CheckIn] 加载床位失败:', error)
       // 尝试从本地缓存加载
-      const cacheKey = `beds_floor_${floor}`
+      const cacheKey = isNanTwo && room ? `beds_nantwo_${floor}_${room}` : `beds_floor_${floor}`
       const cachedData = Taro.getStorageSync(cacheKey)
       if (cachedData && cachedData.length > 0) {
         console.log('[CheckIn] 网络错误，使用本地缓存数据')
@@ -263,7 +272,7 @@ const CheckInPage = () => {
     <View className="min-h-screen bg-gray-50">
       <View className="bg-white px-4 py-3 border-b border-gray-200">
         <Text className="text-lg font-semibold text-gray-800">
-          {floor}楼 - 入住登记
+          {isNanTwo ? `南二巷宿舍 - ${floor}楼${room ? ` - ${room}` : ''}` : `南四巷180号宿舍 - ${floor}楼`} - 入住登记
         </Text>
         <Text className="text-xs text-gray-500 block mt-1">
           点击空床位进行入住登记，点击已入住床位查看详情
@@ -277,7 +286,8 @@ const CheckInPage = () => {
       ) : (
         <View className="p-4">
           <View className="grid grid-cols-2 gap-3">
-            {Array.from({ length: 15 }, (_, i) => i + 1).map((bedNum) => {
+            {/* 根据实际床位数量动态显示 */}
+            {Array.from(new Set(beds.map(b => b.bedNumber))).sort((a, b) => a - b).map((bedNum) => {
               const upperBed = beds.find(b => b.bedNumber === bedNum && b.position === 'upper')
               const lowerBed = beds.find(b => b.bedNumber === bedNum && b.position === 'lower')
 

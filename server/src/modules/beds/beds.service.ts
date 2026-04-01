@@ -1,6 +1,33 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
+// 南二巷宿舍房间配置
+interface RoomConfig {
+  room: string;
+  bedCount: number;
+  bedPositions: number[];
+}
+
+const NAN_TWO_ROOM_CONFIG: Record<number, RoomConfig[]> = {
+  2: [
+    { room: '201', bedCount: 2, bedPositions: [1, 2] },
+    { room: '202', bedCount: 3, bedPositions: [1, 2, 3] },
+    { room: '203', bedCount: 3, bedPositions: [1, 2, 3] },
+    { room: '204', bedCount: 2, bedPositions: [1, 2] },
+  ],
+  3: [
+    { room: '301', bedCount: 3, bedPositions: [1, 2, 3] },
+    { room: '302', bedCount: 3, bedPositions: [1, 2, 3] },
+    { room: '303', bedCount: 2, bedPositions: [1, 2] },
+    { room: '304', bedCount: 3, bedPositions: [1, 2, 3] },
+  ],
+  4: [
+    { room: '401', bedCount: 2, bedPositions: [1, 2] },
+    { room: '402', bedCount: 2, bedPositions: [1, 2] },
+    { room: '大厅', bedCount: 4, bedPositions: [1, 2, 3, 4] },
+  ],
+};
+
 @Injectable()
 export class BedsService implements OnModuleInit {
   async onModuleInit() {
@@ -52,6 +79,8 @@ export class BedsService implements OnModuleInit {
       bed_number: number;
       position: string;
       status: string;
+      dormitory: string;
+      room: string;
     }> = [];
     for (let floor = 1; floor <= 4; floor++) {
       for (let bedNum = 1; bedNum <= 15; bedNum++) {
@@ -60,12 +89,16 @@ export class BedsService implements OnModuleInit {
           bed_number: bedNum,
           position: 'upper',
           status: 'empty',
+          dormitory: 'nanfour_180',
+          room: '',
         });
         beds.push({
           floor,
           bed_number: bedNum,
           position: 'lower',
           status: 'empty',
+          dormitory: 'nanfour_180',
+          room: '',
         });
       }
     }
@@ -190,6 +223,212 @@ export class BedsService implements OnModuleInit {
       code: 200,
       msg: '获取成功',
       data: stats,
+    };
+  }
+
+  // 获取南二巷宿舍楼层列表
+  async getNanTwoFloors() {
+    const floors = Object.keys(NAN_TWO_ROOM_CONFIG).map(Number).sort((a, b) => a - b);
+    const stats = floors.map(floor => {
+      const rooms = NAN_TWO_ROOM_CONFIG[floor];
+      const totalBeds = rooms.reduce((sum, r) => sum + r.bedCount * 2, 0); // 每床2个铺位
+      return {
+        floor,
+        rooms: rooms.map(r => r.room),
+        totalBeds,
+      };
+    });
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: stats,
+    };
+  }
+
+  // 获取南二巷某楼层的房间列表
+  async getNanTwoRoomsByFloor(floor: number) {
+    const client = getSupabaseClient();
+    const rooms = NAN_TWO_ROOM_CONFIG[floor];
+
+    if (!rooms) {
+      return {
+        code: 400,
+        msg: '楼层不存在',
+        data: null,
+      };
+    }
+
+    // 从数据库查询该宿舍区域该楼层的所有床位
+    const { data: beds, error } = await client
+      .from('beds')
+      .select('*')
+      .eq('dormitory', 'nantwo')
+      .eq('floor', floor);
+
+    if (error) {
+      console.error('[BedsService] 获取南二巷床位失败:', error);
+    }
+
+    // 统计每个房间的入住情况
+    const roomStats = rooms.map(roomConfig => {
+      const roomBeds = beds?.filter(b => b.room === roomConfig.room) || [];
+      const occupiedCount = roomBeds.filter(b => b.status === 'occupied').length;
+      const totalPositions = roomConfig.bedCount * 2; // 上下铺
+      
+      return {
+        room: roomConfig.room,
+        bedCount: roomConfig.bedCount,
+        totalBeds: totalPositions,
+        occupiedBeds: occupiedCount,
+        emptyBeds: totalPositions - occupiedCount,
+      };
+    });
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: roomStats,
+    };
+  }
+
+  // 获取南二巷某房间的床位列表
+  async getNanTwoBedsByRoom(floor: number, room: string) {
+    const client = getSupabaseClient();
+
+    const roomConfig = NAN_TWO_ROOM_CONFIG[floor]?.find(r => r.room === room);
+    if (!roomConfig) {
+      return {
+        code: 400,
+        msg: '房间不存在',
+        data: null,
+      };
+    }
+
+    // 查询数据库中的床位
+    const { data: beds, error } = await client
+      .from('beds')
+      .select('*')
+      .eq('dormitory', 'nantwo')
+      .eq('floor', floor)
+      .eq('room', room)
+      .order('bed_number', { ascending: true })
+      .order('position', { ascending: true });
+
+    if (error) {
+      console.error('[BedsService] 获取房间床位失败:', error);
+      throw new Error('获取床位失败');
+    }
+
+    // 如果数据库中没有这个房间的床位，需要初始化
+    if (!beds || beds.length === 0) {
+      // 初始化该房间的床位
+      const newBeds: Array<{
+        floor: number;
+        bed_number: number;
+        position: string;
+        status: string;
+        dormitory: string;
+        room: string;
+      }> = [];
+
+      for (const bedNum of roomConfig.bedPositions) {
+        newBeds.push({
+          floor,
+          bed_number: bedNum,
+          position: 'upper',
+          status: 'empty',
+          dormitory: 'nantwo',
+          room,
+        });
+        newBeds.push({
+          floor,
+          bed_number: bedNum,
+          position: 'lower',
+          status: 'empty',
+          dormitory: 'nantwo',
+          room,
+        });
+      }
+
+      const { error: insertError } = await client.from('beds').insert(newBeds);
+      if (insertError) {
+        console.error('[BedsService] 初始化房间床位失败:', insertError);
+        throw new Error('初始化床位失败');
+      }
+
+      // 重新查询
+      const { data: newBedsData } = await client
+        .from('beds')
+        .select('*')
+        .eq('dormitory', 'nantwo')
+        .eq('floor', floor)
+        .eq('room', room)
+        .order('bed_number', { ascending: true })
+        .order('position', { ascending: true });
+
+      return {
+        code: 200,
+        msg: '获取成功',
+        data: newBedsData || [],
+      };
+    }
+
+    // 获取入住记录
+    const bedIds = beds.map(b => b.id);
+    const { data: checkIns } = await client
+      .from('check_ins')
+      .select('id, bed_id, name, id_card, phone, check_in_time')
+      .in('bed_id', bedIds);
+
+    // 组装数据
+    const bedsData = beds.map(bed => {
+      const checkIn = checkIns?.find(c => c.bed_id === bed.id);
+      return {
+        ...bed,
+        checkIn: checkIn && bed.status === 'occupied' ? checkIn : null,
+      };
+    });
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: bedsData,
+    };
+  }
+
+  // 获取南二巷宿舍统计
+  async getNanTwoStats() {
+    const client = getSupabaseClient();
+
+    // 从数据库查询南二巷所有床位
+    const { data: beds, error } = await client
+      .from('beds')
+      .select('floor, room, status')
+      .eq('dormitory', 'nantwo');
+
+    if (error) {
+      console.error('[BedsService] 获取南二巷统计失败:', error);
+    }
+
+    // 计算总床位数
+    let totalBeds = 0;
+    for (const floor of Object.keys(NAN_TWO_ROOM_CONFIG).map(Number)) {
+      const rooms = NAN_TWO_ROOM_CONFIG[floor];
+      totalBeds += rooms.reduce((sum, r) => sum + r.bedCount * 2, 0);
+    }
+
+    const occupiedBeds = beds?.filter(b => b.status === 'occupied').length || 0;
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: {
+        totalBeds,
+        occupiedBeds,
+        emptyBeds: totalBeds - occupiedBeds,
+        floors: Object.keys(NAN_TWO_ROOM_CONFIG).map(Number).sort((a, b) => a - b),
+      },
     };
   }
 }

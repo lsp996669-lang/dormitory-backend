@@ -99,7 +99,7 @@ export class CheckOutService {
     const bedIds = [...new Set(checkOuts?.map(c => c.bed_id) || [])];
     const { data: beds } = await client
       .from('beds')
-      .select('id, floor, bed_number, position')
+      .select('id, floor, bed_number, position, dormitory, room')
       .in('id', bedIds);
 
     // 组装数据
@@ -110,6 +110,8 @@ export class CheckOutService {
         floor: bed?.floor,
         bedNumber: bed?.bed_number,
         position: bed?.position,
+        dormitory: bed?.dormitory || 'nanfour_180',
+        room: bed?.room,
       };
     });
 

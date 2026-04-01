@@ -41,6 +41,8 @@ interface CheckOutRecord {
   floor?: number
   bedNumber?: number
   position?: string
+  dormitory?: string
+  room?: string
 }
 
 const CheckOutPage = () => {
@@ -48,6 +50,8 @@ const CheckOutPage = () => {
   const [loading, setLoading] = useState(true)
   const [expandedFloor, setExpandedFloor] = useState<number | null>(null)
   const [expandedDormitory, setExpandedDormitory] = useState<boolean>(true) // 南四巷180号宿舍展开状态
+  const [expandedNanTwo, setExpandedNanTwo] = useState<boolean>(false) // 南二巷宿舍展开状态
+  const [nanTwoFloorExpanded, setNanTwoFloorExpanded] = useState<number | null>(null) // 南二巷展开的楼层
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [deleting, setDeleting] = useState(false)
@@ -79,7 +83,9 @@ const CheckOutPage = () => {
           checkOutTime: record.checkOutTime || record.check_out_time,
           floor: record.floor,
           bedNumber: record.bedNumber || record.bed_number,
-          position: record.position
+          position: record.position,
+          dormitory: record.dormitory || 'nanfour_180',
+          room: record.room
         }))
         setRecords(formattedRecords)
         // 保存到本地缓存
@@ -138,8 +144,22 @@ const CheckOutPage = () => {
     return position === 'upper' ? '上铺' : '下铺'
   }
 
-  // 按楼层分组
-  const groupedByFloor = records.reduce((acc, record) => {
+  // 按宿舍区域分组
+  const nanFourRecords = records.filter(r => r.dormitory === 'nanfour_180' || !r.dormitory)
+  const nanTwoRecords = records.filter(r => r.dormitory === 'nantwo')
+
+  // 按楼层分组 - 南四巷
+  const groupedByFloor = nanFourRecords.reduce((acc, record) => {
+    const floor = record.floor || 0
+    if (!acc[floor]) {
+      acc[floor] = []
+    }
+    acc[floor].push(record)
+    return acc
+  }, {} as Record<number, CheckOutRecord[]>)
+
+  // 按楼层分组 - 南二巷
+  const nanTwoGroupedByFloor = nanTwoRecords.reduce((acc, record) => {
     const floor = record.floor || 0
     if (!acc[floor]) {
       acc[floor] = []
@@ -150,6 +170,10 @@ const CheckOutPage = () => {
 
   // 获取楼层列表并排序
   const floors = Object.keys(groupedByFloor)
+    .map(Number)
+    .sort((a, b) => a - b)
+
+  const nanTwoFloors = Object.keys(nanTwoGroupedByFloor)
     .map(Number)
     .sort((a, b) => a - b)
 
@@ -327,7 +351,7 @@ const CheckOutPage = () => {
                   <View>
                     <CardTitle className="text-lg">南四巷180号宿舍</CardTitle>
                     <Text className="text-xs text-gray-500">
-                      共 {records.length} 条搬离记录
+                      共 {nanFourRecords.length} 条搬离记录
                     </Text>
                   </View>
                 </View>
@@ -450,6 +474,146 @@ const CheckOutPage = () => {
               </CardContent>
             )}
           </Card>
+
+          {/* 南二巷宿舍 */}
+          {nanTwoRecords.length > 0 && (
+            <Card className="overflow-hidden border-2 border-purple-200">
+              <CardHeader 
+                className="pb-3 bg-purple-50 cursor-pointer"
+                onClick={() => !isSelectMode && setExpandedNanTwo(!expandedNanTwo)}
+              >
+                <View className="flex items-center justify-between">
+                  <View className="flex items-center gap-3">
+                    <View className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                      <House size={20} color="#9333ea" />
+                    </View>
+                    <View>
+                      <CardTitle className="text-lg">南二巷宿舍</CardTitle>
+                      <Text className="text-xs text-gray-500">
+                        共 {nanTwoRecords.length} 条搬离记录
+                      </Text>
+                    </View>
+                  </View>
+                  {!isSelectMode && (
+                    <View className="flex items-center">
+                      {expandedNanTwo ? (
+                        <ChevronUp size={20} color="#6b7280" />
+                      ) : (
+                        <ChevronDown size={20} color="#6b7280" />
+                      )}
+                    </View>
+                  )}
+                </View>
+              </CardHeader>
+              
+              {(expandedNanTwo || isSelectMode) && (
+                <CardContent className="p-4 space-y-3">
+                  {nanTwoFloors.map((floor) => (
+                    <View key={floor} className="border border-gray-100 rounded-lg overflow-hidden">
+                      {/* 楼层标题 */}
+                      <View 
+                        className="bg-gray-50 px-3 py-2 cursor-pointer"
+                        onClick={() => !isSelectMode && setNanTwoFloorExpanded(nanTwoFloorExpanded === floor ? null : floor)}
+                      >
+                        <View className="flex items-center justify-between">
+                          <View className="flex items-center gap-2">
+                            <View className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                              <Building size={16} color="#9333ea" />
+                            </View>
+                            <View>
+                              <Text className="text-base font-medium text-gray-800">{floor}楼</Text>
+                              <Text className="text-xs text-gray-500">
+                                {nanTwoGroupedByFloor[floor].length} 条搬离记录
+                              </Text>
+                            </View>
+                          </View>
+                          {!isSelectMode && (
+                            <View className="flex items-center">
+                              {nanTwoFloorExpanded === floor ? (
+                                <ChevronUp size={16} color="#6b7280" />
+                              ) : (
+                                <ChevronDown size={16} color="#6b7280" />
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                      
+                      {/* 楼层记录列表 */}
+                      {(nanTwoFloorExpanded === floor || isSelectMode) && (
+                        <View className="p-3 space-y-3 bg-white">
+                          {nanTwoGroupedByFloor[floor].map((record) => (
+                            <View
+                              key={record.id}
+                              className={`bg-gray-50 rounded-lg p-3 border ${
+                                selectedIds.has(record.id) 
+                                  ? 'border-blue-500 bg-blue-50' 
+                                  : 'border-gray-100'
+                              }`}
+                            >
+                              {isSelectMode && (
+                                <View className="flex items-center gap-2 mb-2">
+                                  <Checkbox
+                                    value={String(record.id)}
+                                    checked={selectedIds.has(record.id)}
+                                    onClick={() => toggleSelect(record.id)}
+                                    color="#1890ff"
+                                  />
+                                  <Text className="text-sm text-gray-700 font-medium">
+                                    {record.name}
+                                  </Text>
+                                </View>
+                              )}
+                              
+                              {/* 床位信息 */}
+                              <View className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+                                <Bed size={14} color="#6b7280" />
+                                <Text className="text-sm text-gray-700 font-medium">
+                                  {record.room ? `${record.room} - ` : ''}{record.bedNumber || '-'}号床，{getPositionLabel(record.position)}
+                                </Text>
+                              </View>
+
+                              {/* 人员信息 */}
+                              <View className="space-y-2">
+                                <View className="flex items-center justify-between">
+                                  <View className="flex items-center gap-1">
+                                    <User size={12} color="#9ca3af" />
+                                    <Text className="text-xs text-gray-500">姓名</Text>
+                                  </View>
+                                  <Text
+                                    className="text-sm text-blue-600 font-medium"
+                                    onClick={() => handleNameClick(record)}
+                                  >
+                                    {record.name}
+                                  </Text>
+                                </View>
+
+                                <View className="flex items-center justify-between">
+                                  <View className="flex items-center gap-1">
+                                    <Calendar size={12} color="#9ca3af" />
+                                    <Text className="text-xs text-gray-500">入住日期</Text>
+                                  </View>
+                                  <Text className="text-xs text-gray-700">{formatDate(record.checkInTime)}</Text>
+                                </View>
+
+                                <View className="flex items-center justify-between">
+                                  <View className="flex items-center gap-1">
+                                    <LogOut size={12} color="#9333ea" />
+                                    <Text className="text-xs text-gray-500">搬离日期</Text>
+                                  </View>
+                                  <Text className="text-xs text-purple-600">{formatDate(record.checkOutTime)}</Text>
+                                </View>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </CardContent>
+              )}
+            </Card>
+          )}
         </View>
       )}
 
