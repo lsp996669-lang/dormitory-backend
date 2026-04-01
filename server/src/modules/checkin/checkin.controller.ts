@@ -16,4 +16,13 @@ export class CheckInController {
       body.checkInDate
     );
   }
+
+  @Post('transfer')
+  async transferBed(@Body() body: { checkInId: number; targetBedId: number }) {
+    console.log('转移床位请求:', body);
+    return await this.checkInService.transferBed(
+      body.checkInId,
+      body.targetBedId
+    );
+  }
 }
