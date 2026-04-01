@@ -13,8 +13,8 @@ const path = require('path')
   try {
     const uploadResult = await ci.upload({
       project,
-      version: '1.0.5',
-      desc: '隐藏体验版vConsole调试按钮',
+      version: '1.0.6',
+      desc: '完全移除vConsole调试按钮',
       setting: {
         es6: false,
         es7: false,

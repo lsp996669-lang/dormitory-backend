@@ -15,5 +15,8 @@
   },
   "compileType": "miniprogram",
   "srcMiniprogramRoot": "./src/",
-  "condition": {}
+  "condition": {},
+  "debugOptions": {
+    "debugAsRelease": true
+  }
 }

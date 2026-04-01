@@ -2,23 +2,11 @@ import Taro from '@tarojs/taro';
 
 /**
  * 小程序调试工具
- * 只在开发版自动开启调试模式
- * 体验版和正式版不开启
+ * vConsole 调试按钮已禁用
+ * 如需调试，请在微信开发者工具中手动开启
  */
 export function devDebug() {
-  const env = Taro.getEnv();
-  if (env === Taro.ENV_TYPE.WEAPP || env === Taro.ENV_TYPE.TT) {
-    try {
-      const accountInfo = Taro.getAccountInfoSync();
-      const envVersion = accountInfo.miniProgram.envVersion;
-      console.log('[Debug] envVersion:', envVersion);
-
-      // 只在开发版(develop)开启调试，体验版(trial)和正式版(release)不开启
-      if (envVersion === 'develop') {
-        Taro.setEnableDebug({ enableDebug: true });
-      }
-    } catch (error) {
-      console.error('[Debug] 开启调试模式失败:', error);
-    }
-  }
+  // vConsole 已禁用
+  // 如需在开发版调试，可在微信开发者工具中点击"调试"按钮手动开启
+  console.log('[Debug] vConsole 已禁用');
 }
