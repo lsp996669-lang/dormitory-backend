@@ -2,8 +2,8 @@ import Taro from '@tarojs/taro';
 
 /**
  * 小程序调试工具
- * 在开发版/体验版自动开启调试模式
- * 支持微信小程序和抖音小程序
+ * 只在开发版自动开启调试模式
+ * 体验版和正式版不开启
  */
 export function devDebug() {
   const env = Taro.getEnv();
@@ -13,7 +13,8 @@ export function devDebug() {
       const envVersion = accountInfo.miniProgram.envVersion;
       console.log('[Debug] envVersion:', envVersion);
 
-      if (envVersion !== 'release') {
+      // 只在开发版(develop)开启调试，体验版(trial)和正式版(release)不开启
+      if (envVersion === 'develop') {
         Taro.setEnableDebug({ enableDebug: true });
       }
     } catch (error) {

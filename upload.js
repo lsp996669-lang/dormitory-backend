@@ -13,8 +13,8 @@ const path = require('path')
   try {
     const uploadResult = await ci.upload({
       project,
-      version: '1.0.4',
-      desc: '数据导出支持按宿舍楼导出，修复搬离人员显示问题，修复南四巷床位统计问题',
+      version: '1.0.5',
+      desc: '隐藏体验版vConsole调试按钮',
       setting: {
         es6: false,
         es7: false,
