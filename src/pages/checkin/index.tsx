@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Network } from '@/network'
-import { Bed, User, Phone, CreditCard, Calendar } from 'lucide-react-taro'
+import { Bed, User, Phone, CreditCard, Calendar, DoorOpen } from 'lucide-react-taro'
 import './index.css'
 
 // 检查登录状态的工具函数
@@ -92,9 +92,15 @@ const CheckInPage = () => {
       let cacheKey = `beds_floor_${floor}`
       
       // 南二巷宿舍使用不同的API
-      if (isNanTwo && room) {
-        url = `/api/beds/nantwo/floor/${floor}/room/${room}`
-        cacheKey = `beds_nantwo_${floor}_${room}`
+      if (isNanTwo) {
+        if (room) {
+          url = `/api/beds/nantwo/floor/${floor}/room/${room}`
+          cacheKey = `beds_nantwo_${floor}_${room}`
+        } else {
+          // 获取整个楼层的床位
+          url = `/api/beds/nantwo/floor/${floor}/beds`
+          cacheKey = `beds_nantwo_floor_${floor}`
+        }
       }
 
       console.log(`[CheckIn] 开始加载床位数据，URL: ${url}`)
@@ -283,7 +289,119 @@ const CheckInPage = () => {
         <View className="flex justify-center items-center py-12">
           <Text className="text-gray-400">加载中...</Text>
         </View>
+      ) : isNanTwo && !room ? (
+        // 南二巷宿舍楼层视图 - 按房间分组显示
+        <View className="p-4 space-y-4">
+          {Array.from(new Set(beds.map(b => b.room))).sort().map((roomName) => {
+            const roomBeds = beds.filter(b => b.room === roomName)
+            const bedNumbers = Array.from(new Set(roomBeds.map(b => b.bedNumber))).sort((a, b) => a - b)
+            
+            return (
+              <View key={roomName} className="bg-white rounded-lg border border-purple-200 overflow-hidden">
+                <View className="bg-purple-50 px-4 py-2 border-b border-purple-200">
+                  <View className="flex items-center gap-2">
+                    <DoorOpen size={16} color="#9333ea" />
+                    <Text className="text-sm font-medium text-purple-700">{roomName}</Text>
+                    <Text className="text-xs text-gray-500">
+                      ({bedNumbers.length}张床 {roomBeds.length}个铺位)
+                    </Text>
+                  </View>
+                </View>
+                <View className="p-3">
+                  <View className="grid grid-cols-2 gap-3">
+                    {bedNumbers.map((bedNum) => {
+                      const upperBed = roomBeds.find(b => b.bedNumber === bedNum && b.position === 'upper')
+                      const lowerBed = roomBeds.find(b => b.bedNumber === bedNum && b.position === 'lower')
+
+                      return (
+                        <View key={bedNum} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                          <View className="bg-gray-100 px-3 py-1 border-b border-gray-200">
+                            <Text className="text-xs font-medium text-gray-600">{bedNum}号床</Text>
+                          </View>
+                          <View className="p-2 space-y-2">
+                            {/* 上铺 */}
+                            <View
+                              className={`rounded p-2 cursor-pointer ${
+                                upperBed?.status === 'occupied'
+                                  ? 'bg-green-50 border border-green-200'
+                                  : 'bg-white border border-gray-200'
+                              }`}
+                              onClick={() => upperBed && handleBedClick(upperBed)}
+                            >
+                              <View className="flex items-center justify-between">
+                                <View className="flex items-center gap-1">
+                                  <Bed size={14} color={upperBed?.status === 'occupied' ? '#22c55e' : '#9ca3af'} />
+                                  <Text className={`text-xs font-medium ${
+                                    upperBed?.status === 'occupied' ? 'text-green-700' : 'text-gray-500'
+                                  }`}
+                                  >
+                                    上铺
+                                  </Text>
+                                </View>
+                                {upperBed?.status === 'occupied' && (
+                                  <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
+                                )}
+                              </View>
+                              {upperBed?.status === 'empty' && (
+                                <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                              )}
+                              {upperBed?.status === 'occupied' && upperBed.checkIn && (
+                                <View className="mt-1">
+                                  <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                                  <Text className="text-xs text-gray-500 block">
+                                    入住: {formatDate(upperBed.checkIn.checkInTime)}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* 下铺 */}
+                            <View
+                              className={`rounded p-2 cursor-pointer ${
+                                lowerBed?.status === 'occupied'
+                                  ? 'bg-green-50 border border-green-200'
+                                  : 'bg-white border border-gray-200'
+                              }`}
+                              onClick={() => lowerBed && handleBedClick(lowerBed)}
+                            >
+                              <View className="flex items-center justify-between">
+                                <View className="flex items-center gap-1">
+                                  <Bed size={14} color={lowerBed?.status === 'occupied' ? '#22c55e' : '#9ca3af'} />
+                                  <Text className={`text-xs font-medium ${
+                                    lowerBed?.status === 'occupied' ? 'text-green-700' : 'text-gray-500'
+                                  }`}
+                                  >
+                                    下铺
+                                  </Text>
+                                </View>
+                                {lowerBed?.status === 'occupied' && (
+                                  <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
+                                )}
+                              </View>
+                              {lowerBed?.status === 'empty' && (
+                                <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                              )}
+                              {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
+                                <View className="mt-1">
+                                  <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                                  <Text className="text-xs text-gray-500 block">
+                                    入住: {formatDate(lowerBed.checkIn.checkInTime)}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      )
+                    })}
+                  </View>
+                </View>
+              </View>
+            )
+          })}
+        </View>
       ) : (
+        // 南四巷宿舍或南二巷单个房间视图
         <View className="p-4">
           <View className="grid grid-cols-2 gap-3">
             {/* 根据实际床位数量动态显示 */}

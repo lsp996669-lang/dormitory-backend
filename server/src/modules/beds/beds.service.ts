@@ -397,6 +397,114 @@ export class BedsService implements OnModuleInit {
     };
   }
 
+  // 获取南二巷某楼层的所有床位（用于楼层视图）
+  async getNanTwoBedsByFloor(floor: number) {
+    const client = getSupabaseClient();
+    const rooms = NAN_TWO_ROOM_CONFIG[floor];
+
+    if (!rooms) {
+      return {
+        code: 400,
+        msg: '楼层不存在',
+        data: null,
+      };
+    }
+
+    // 查询数据库中该楼层的所有床位
+    const { data: beds, error } = await client
+      .from('beds')
+      .select('*')
+      .eq('dormitory', 'nantwo')
+      .eq('floor', floor)
+      .order('room', { ascending: true })
+      .order('bed_number', { ascending: true })
+      .order('position', { ascending: true });
+
+    if (error) {
+      console.error('[BedsService] 获取南二巷楼层床位失败:', error);
+      throw new Error('获取床位失败');
+    }
+
+    // 检查是否需要初始化床位
+    const existingRooms = new Set(beds?.map(b => b.room) || []);
+    const missingRooms = rooms.filter(r => !existingRooms.has(r.room));
+
+    if (missingRooms.length > 0) {
+      // 初始化缺失的房间床位
+      const newBeds: Array<{
+        floor: number;
+        bed_number: number;
+        position: string;
+        status: string;
+        dormitory: string;
+        room: string;
+      }> = [];
+
+      for (const roomConfig of missingRooms) {
+        for (const bedNum of roomConfig.bedPositions) {
+          newBeds.push({
+            floor,
+            bed_number: bedNum,
+            position: 'upper',
+            status: 'empty',
+            dormitory: 'nantwo',
+            room: roomConfig.room,
+          });
+          newBeds.push({
+            floor,
+            bed_number: bedNum,
+            position: 'lower',
+            status: 'empty',
+            dormitory: 'nantwo',
+            room: roomConfig.room,
+          });
+        }
+      }
+
+      const { error: insertError } = await client.from('beds').insert(newBeds);
+      if (insertError) {
+        console.error('[BedsService] 初始化楼层床位失败:', insertError);
+      }
+    }
+
+    // 重新查询所有床位
+    const { data: allBeds, error: queryError } = await client
+      .from('beds')
+      .select('*')
+      .eq('dormitory', 'nantwo')
+      .eq('floor', floor)
+      .order('room', { ascending: true })
+      .order('bed_number', { ascending: true })
+      .order('position', { ascending: true });
+
+    if (queryError) {
+      console.error('[BedsService] 查询楼层床位失败:', queryError);
+      throw new Error('获取床位失败');
+    }
+
+    // 获取入住记录
+    const bedIds = allBeds?.map(b => b.id) || [];
+    const { data: checkIns } = await client
+      .from('check_ins')
+      .select('id, bed_id, name, id_card, phone, check_in_time')
+      .in('bed_id', bedIds);
+
+    // 组装数据
+    const bedsData = allBeds?.map(bed => {
+      const checkIn = checkIns?.find(c => c.bed_id === bed.id);
+      return {
+        ...bed,
+        checkIn: checkIn && bed.status === 'occupied' ? checkIn : null,
+      };
+    }) || [];
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: bedsData,
+    };
+  }
+
   // 获取南二巷宿舍统计
   async getNanTwoStats() {
     const client = getSupabaseClient();
@@ -429,6 +537,50 @@ export class BedsService implements OnModuleInit {
         emptyBeds: totalBeds - occupiedBeds,
         floors: Object.keys(NAN_TWO_ROOM_CONFIG).map(Number).sort((a, b) => a - b),
       },
+    };
+  }
+
+  // 获取南二巷各楼层统计（类似南四巷格式）
+  async getNanTwoFloorStats() {
+    const client = getSupabaseClient();
+
+    // 从数据库查询南二巷所有床位
+    const { data: beds, error } = await client
+      .from('beds')
+      .select('floor, status')
+      .eq('dormitory', 'nantwo');
+
+    if (error) {
+      console.error('[BedsService] 获取南二巷楼层统计失败:', error);
+    }
+
+    const stats: Array<{
+      floor: number;
+      totalBeds: number;
+      occupiedBeds: number;
+      emptyBeds: number;
+      rooms: string[];
+    }> = [];
+
+    for (const floor of Object.keys(NAN_TWO_ROOM_CONFIG).map(Number).sort((a, b) => a - b)) {
+      const rooms = NAN_TWO_ROOM_CONFIG[floor];
+      const totalBeds = rooms.reduce((sum, r) => sum + r.bedCount * 2, 0);
+      const floorBeds = beds?.filter(b => b.floor === floor) || [];
+      const occupiedBeds = floorBeds.filter(b => b.status === 'occupied').length;
+
+      stats.push({
+        floor,
+        totalBeds,
+        occupiedBeds,
+        emptyBeds: totalBeds - occupiedBeds,
+        rooms: rooms.map(r => r.room),
+      });
+    }
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: stats,
     };
   }
 }

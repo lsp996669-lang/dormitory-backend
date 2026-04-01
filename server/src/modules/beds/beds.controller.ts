@@ -38,6 +38,12 @@ export class BedsController {
     console.log('获取南二巷房间床位请求:', floor, room);
     return await this.bedsService.getNanTwoBedsByRoom(parseInt(floor, 10), room);
   }
+
+  @Get('nantwo/floor/:floor/beds')
+  async getNanTwoBedsByFloor(@Param('floor') floor: string) {
+    console.log('获取南二巷楼层所有床位请求:', floor);
+    return await this.bedsService.getNanTwoBedsByFloor(parseInt(floor, 10));
+  }
 }
 
 @Controller('floors')
@@ -54,5 +60,11 @@ export class FloorsController {
   async getNanTwoStats() {
     console.log('获取南二巷统计请求');
     return await this.bedsService.getNanTwoStats();
+  }
+
+  @Get('nantwo/floor-stats')
+  async getNanTwoFloorStats() {
+    console.log('获取南二巷楼层统计请求');
+    return await this.bedsService.getNanTwoFloorStats();
   }
 }

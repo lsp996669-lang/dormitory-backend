@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, DoorOpen } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -25,12 +25,12 @@ interface Notification {
   created_at: string
 }
 
-interface NanTwoRoomStats {
-  room: string
-  bedCount: number
+interface NanTwoFloorStats {
+  floor: number
   totalBeds: number
   occupiedBeds: number
   emptyBeds: number
+  rooms: string[]
 }
 
 const FloorPage = () => {
@@ -42,8 +42,7 @@ const FloorPage = () => {
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [expandedDormitory, setExpandedDormitory] = useState(true) // 南四巷180号宿舍展开状态
   const [expandedNanTwo, setExpandedNanTwo] = useState(false) // 南二巷宿舍展开状态
-  const [nanTwoFloorExpanded, setNanTwoFloorExpanded] = useState<number | null>(null) // 南二巷展开的楼层
-  const [nanTwoRooms, setNanTwoRooms] = useState<NanTwoRoomStats[]>([]) // 南二巷房间列表
+  const [nanTwoFloorStats, setNanTwoFloorStats] = useState<NanTwoFloorStats[]>([]) // 南二巷楼层统计
   const [nanTwoStats, setNanTwoStats] = useState({ totalBeds: 0, occupiedBeds: 0, emptyBeds: 0 }) // 南二巷统计
 
   // 检查服务器状态
@@ -74,12 +73,12 @@ const FloorPage = () => {
     checkAuth()
     loadFloorStats()
     loadNotificationCount()
-    loadNanTwoStats()
+    loadNanTwoFloorStats()
   })
 
   usePullDownRefresh(() => {
     console.log('[Floor] 触发下拉刷新')
-    Promise.all([loadFloorStats(), loadNotificationCount(), loadNanTwoStats()])
+    Promise.all([loadFloorStats(), loadNotificationCount(), loadNanTwoFloorStats()])
       .finally(() => {
         Taro.stopPullDownRefresh()
       })
@@ -93,32 +92,25 @@ const FloorPage = () => {
     // 不强制跳转登录页，允许用户先浏览
   }
 
-  // 加载南二巷宿舍统计
-  const loadNanTwoStats = async () => {
+  // 加载南二巷楼层统计
+  const loadNanTwoFloorStats = async () => {
     try {
       const res = await Network.request({
-        url: '/api/floors/nantwo/stats'
+        url: '/api/floors/nantwo/floor-stats'
       })
       if (res.data?.code === 200 && res.data?.data) {
-        setNanTwoStats(res.data.data)
+        setNanTwoFloorStats(res.data.data)
+        // 计算总计
+        const total = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
+        const occupied = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
+        setNanTwoStats({
+          totalBeds: total,
+          occupiedBeds: occupied,
+          emptyBeds: total - occupied
+        })
       }
     } catch (error) {
-      console.error('[Floor] 加载南二巷统计失败:', error)
-    }
-  }
-
-  // 加载南二巷某楼层的房间列表
-  const loadNanTwoRooms = async (floor: number) => {
-    try {
-      const res = await Network.request({
-        url: `/api/beds/nantwo/floor/${floor}/rooms`
-      })
-      if (res.data?.code === 200 && res.data?.data) {
-        setNanTwoRooms(res.data.data)
-      }
-    } catch (error) {
-      console.error('[Floor] 加载南二巷房间列表失败:', error)
-      setNanTwoRooms([])
+      console.error('[Floor] 加载南二巷楼层统计失败:', error)
     }
   }
 
@@ -251,19 +243,8 @@ const FloorPage = () => {
     })
   }
 
-  // 南二巷楼层点击 - 展开显示房间列表
-  const handleNanTwoFloorClick = async (floor: number) => {
-    if (nanTwoFloorExpanded === floor) {
-      setNanTwoFloorExpanded(null)
-      setNanTwoRooms([])
-    } else {
-      setNanTwoFloorExpanded(floor)
-      await loadNanTwoRooms(floor)
-    }
-  }
-
-  // 南二巷房间点击 - 跳转到入住页面
-  const handleNanTwoRoomClick = (floor: number, room: string) => {
+  // 南二巷楼层入住
+  const handleNanTwoFloorClick = (floor: number) => {
     if (!isLoggedIn) {
       Taro.showModal({
         title: '提示',
@@ -278,7 +259,27 @@ const FloorPage = () => {
       return
     }
     Taro.navigateTo({
-      url: `/pages/checkin/index?dormitory=nanTwo&floor=${floor}&room=${room}`
+      url: `/pages/checkin/index?dormitory=nanTwo&floor=${floor}`
+    })
+  }
+
+  // 南二巷楼层点名
+  const handleNanTwoRollCallClick = (floor: number) => {
+    if (!isLoggedIn) {
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再进行点名操作',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: '/pages/login/index' })
+          }
+        }
+      })
+      return
+    }
+    Taro.navigateTo({
+      url: `/pages/rollcall/index?dormitory=nanTwo&floor=${floor}`
     })
   }
 
@@ -651,11 +652,10 @@ const FloorPage = () => {
             </CardHeader>
             {expandedNanTwo && (
               <CardContent className="p-4 space-y-3">
-                {/* 二楼 */}
-                <View className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
+                {nanTwoFloorStats.map((floor) => (
                   <View 
-                    className="p-3 cursor-pointer"
-                    onClick={() => handleNanTwoFloorClick(2)}
+                    key={floor.floor} 
+                    className="bg-gray-50 rounded-lg p-3 border border-gray-100"
                   >
                     <View className="flex items-center justify-between">
                       <View className="flex items-center gap-3">
@@ -663,161 +663,37 @@ const FloorPage = () => {
                           <Building size={16} color="#9333ea" />
                         </View>
                         <View>
-                          <Text className="text-base font-medium text-gray-800">二楼</Text>
-                          <Text className="text-xs text-gray-500">201, 202, 203, 204</Text>
+                          <Text className="text-base font-medium text-gray-800">{floor.floor}楼</Text>
+                          <Text className="text-xs text-gray-500">
+                            总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}
+                          </Text>
                         </View>
                       </View>
-                      <View className="flex items-center">
-                        {nanTwoFloorExpanded === 2 ? (
-                          <ChevronUp size={16} color="#6b7280" />
-                        ) : (
-                          <ChevronDown size={16} color="#6b7280" />
-                        )}
+                      <View className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={() => handleNanTwoFloorClick(floor.floor)}
+                        >
+                          <View className="flex items-center gap-1">
+                            <Bed size={14} color="#fff" />
+                            <Text className="text-white text-xs">入住</Text>
+                          </View>
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => handleNanTwoRollCallClick(floor.floor)}
+                        >
+                          <View className="flex items-center gap-1">
+                            <ClipboardCheck size={14} color="#fff" />
+                            <Text className="text-white text-xs">点名</Text>
+                          </View>
+                        </Button>
                       </View>
                     </View>
                   </View>
-                  {nanTwoFloorExpanded === 2 && (
-                    <View className="px-3 pb-3 space-y-2">
-                      {nanTwoRooms.map((room) => (
-                        <View 
-                          key={room.room}
-                          className="bg-white rounded-lg p-3 border border-gray-200"
-                        >
-                          <View className="flex items-center justify-between">
-                            <View className="flex items-center gap-2">
-                              <DoorOpen size={16} color="#9333ea" />
-                              <View>
-                                <Text className="text-sm font-medium text-gray-800">{room.room}</Text>
-                                <Text className="text-xs text-gray-500">
-                                  {room.bedCount}张床 {room.totalBeds}个铺位 | 已住: {room.occupiedBeds} | 空床: {room.emptyBeds}
-                                </Text>
-                              </View>
-                            </View>
-                            <Button
-                              size="sm"
-                              className="bg-purple-600 text-white"
-                              onClick={() => handleNanTwoRoomClick(2, room.room)}
-                            >
-                              <Bed size={14} color="#fff" />
-                            </Button>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                {/* 三楼 */}
-                <View className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
-                  <View 
-                    className="p-3 cursor-pointer"
-                    onClick={() => handleNanTwoFloorClick(3)}
-                  >
-                    <View className="flex items-center justify-between">
-                      <View className="flex items-center gap-3">
-                        <View className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Building size={16} color="#9333ea" />
-                        </View>
-                        <View>
-                          <Text className="text-base font-medium text-gray-800">三楼</Text>
-                          <Text className="text-xs text-gray-500">301, 302, 303, 304</Text>
-                        </View>
-                      </View>
-                      <View className="flex items-center">
-                        {nanTwoFloorExpanded === 3 ? (
-                          <ChevronUp size={16} color="#6b7280" />
-                        ) : (
-                          <ChevronDown size={16} color="#6b7280" />
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                  {nanTwoFloorExpanded === 3 && (
-                    <View className="px-3 pb-3 space-y-2">
-                      {nanTwoRooms.map((room) => (
-                        <View 
-                          key={room.room}
-                          className="bg-white rounded-lg p-3 border border-gray-200"
-                        >
-                          <View className="flex items-center justify-between">
-                            <View className="flex items-center gap-2">
-                              <DoorOpen size={16} color="#9333ea" />
-                              <View>
-                                <Text className="text-sm font-medium text-gray-800">{room.room}</Text>
-                                <Text className="text-xs text-gray-500">
-                                  {room.bedCount}张床 {room.totalBeds}个铺位 | 已住: {room.occupiedBeds} | 空床: {room.emptyBeds}
-                                </Text>
-                              </View>
-                            </View>
-                            <Button
-                              size="sm"
-                              className="bg-purple-600 text-white"
-                              onClick={() => handleNanTwoRoomClick(3, room.room)}
-                            >
-                              <Bed size={14} color="#fff" />
-                            </Button>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                {/* 四楼 */}
-                <View className="bg-gray-50 rounded-lg overflow-hidden border border-gray-100">
-                  <View 
-                    className="p-3 cursor-pointer"
-                    onClick={() => handleNanTwoFloorClick(4)}
-                  >
-                    <View className="flex items-center justify-between">
-                      <View className="flex items-center gap-3">
-                        <View className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Building size={16} color="#9333ea" />
-                        </View>
-                        <View>
-                          <Text className="text-base font-medium text-gray-800">四楼</Text>
-                          <Text className="text-xs text-gray-500">401, 402, 大厅</Text>
-                        </View>
-                      </View>
-                      <View className="flex items-center">
-                        {nanTwoFloorExpanded === 4 ? (
-                          <ChevronUp size={16} color="#6b7280" />
-                        ) : (
-                          <ChevronDown size={16} color="#6b7280" />
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                  {nanTwoFloorExpanded === 4 && (
-                    <View className="px-3 pb-3 space-y-2">
-                      {nanTwoRooms.map((room) => (
-                        <View 
-                          key={room.room}
-                          className="bg-white rounded-lg p-3 border border-gray-200"
-                        >
-                          <View className="flex items-center justify-between">
-                            <View className="flex items-center gap-2">
-                              <DoorOpen size={16} color="#9333ea" />
-                              <View>
-                                <Text className="text-sm font-medium text-gray-800">{room.room}</Text>
-                                <Text className="text-xs text-gray-500">
-                                  {room.bedCount}张床 {room.totalBeds}个铺位 | 已住: {room.occupiedBeds} | 空床: {room.emptyBeds}
-                                </Text>
-                              </View>
-                            </View>
-                            <Button
-                              size="sm"
-                              className="bg-purple-600 text-white"
-                              onClick={() => handleNanTwoRoomClick(4, room.room)}
-                            >
-                              <Bed size={14} color="#fff" />
-                            </Button>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
+                ))}
               </CardContent>
             )}
           </Card>
