@@ -1,5 +1,3 @@
-import Taro from '@tarojs/taro';
-
 /**
  * 小程序调试工具
  * vConsole 调试按钮已禁用

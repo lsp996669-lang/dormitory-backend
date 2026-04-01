@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2, ArrowRight } from 'lucide-react-taro'
+import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2, ArrowRight, Pencil } from 'lucide-react-taro'
 import { Network } from '@/network'
 import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
@@ -44,6 +44,9 @@ interface BedInfo {
   status: string
 }
 
+// 日期修改类型
+type DateEditType = 'checkin-checkin' | 'checkout-checkin' | 'checkout-checkout' | null
+
 const DetailPage = () => {
   const router = useRouter()
   const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId } = router.params
@@ -51,10 +54,17 @@ const DetailPage = () => {
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showTransferDialog, setShowTransferDialog] = useState(false)
+  const [showDateEditDialog, setShowDateEditDialog] = useState(false)
+  const [showDatePasswordDialog, setShowDatePasswordDialog] = useState(false)
   const [checkOutDate, setCheckOutDate] = useState(() => {
     const today = new Date()
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   })
+
+  // 日期编辑相关状态
+  const [dateEditType, setDateEditType] = useState<DateEditType>(null)
+  const [editCheckInDate, setEditCheckInDate] = useState('')
+  const [editCheckOutDate, setEditCheckOutDate] = useState('')
 
   // 转移床位相关状态
   const [targetFloor, setTargetFloor] = useState('2')
@@ -158,6 +168,108 @@ const DetailPage = () => {
   const decodedBedNumber = bedNumber ? decodeURIComponent(bedNumber as string) : '-'
   const hasCheckOut = checkOutTime && checkOutTime !== 'undefined'
   const hasCheckOutId = checkOutId && checkOutId !== 'undefined'
+
+  // 初始化日期编辑状态
+  useEffect(() => {
+    if (checkInTime && checkInTime !== 'undefined') {
+      try {
+        const date = new Date(decodeURIComponent(checkInTime))
+        setEditCheckInDate(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`)
+      } catch {
+        // 忽略解析错误
+      }
+    }
+    if (hasCheckOut && checkOutTime) {
+      try {
+        const date = new Date(decodeURIComponent(checkOutTime))
+        setEditCheckOutDate(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`)
+      } catch {
+        // 忽略解析错误
+      }
+    }
+  }, [checkInTime, checkOutTime, hasCheckOut])
+
+  // 点击日期编辑按钮，先弹出密码验证
+  const handleDateEditClick = (type: DateEditType) => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    setDateEditType(type)
+    setShowDatePasswordDialog(true)
+  }
+
+  // 密码验证成功后显示日期编辑对话框
+  const handleDatePasswordSuccess = () => {
+    setShowDatePasswordDialog(false)
+    setShowDateEditDialog(true)
+  }
+
+  // 提交日期修改
+  const handleDateEditSubmit = async () => {
+    if (!dateEditType) return
+
+    setSubmitting(true)
+    try {
+      let res
+      if (dateEditType === 'checkin-checkin') {
+        // 修改入住记录的入住日期
+        res = await Network.request({
+          url: '/api/checkin/update-date',
+          method: 'POST',
+          data: {
+            checkInId: parseInt(checkInId as string, 10),
+            checkInDate: editCheckInDate
+          }
+        })
+      } else if (dateEditType === 'checkout-checkin') {
+        // 修改搬离记录的入住日期
+        res = await Network.request({
+          url: '/api/checkout/update-checkin-date',
+          method: 'POST',
+          data: {
+            checkOutId: parseInt(checkOutId as string, 10),
+            checkInDate: editCheckInDate
+          }
+        })
+      } else if (dateEditType === 'checkout-checkout') {
+        // 修改搬离记录的搬离日期
+        res = await Network.request({
+          url: '/api/checkout/update-checkout-date',
+          method: 'POST',
+          data: {
+            checkOutId: parseInt(checkOutId as string, 10),
+            checkOutDate: editCheckOutDate
+          }
+        })
+      }
+
+      console.log('日期修改响应:', res?.data)
+
+      if (res?.data?.code === 200) {
+        Taro.showToast({ title: '修改成功', icon: 'success' })
+        setShowDateEditDialog(false)
+        setTimeout(() => {
+          Taro.navigateBack()
+        }, 1500)
+      } else {
+        Taro.showToast({ title: res?.data?.msg || '修改失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('日期修改失败:', error)
+      Taro.showToast({ title: '修改失败，请重试', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // 获取日期编辑对话框标题
+  const getDateEditDialogTitle = () => {
+    if (dateEditType === 'checkin-checkin') return '修改入住日期'
+    if (dateEditType === 'checkout-checkin') return '修改入住日期'
+    if (dateEditType === 'checkout-checkout') return '修改搬离日期'
+    return '修改日期'
+  }
 
   const handleCheckOut = async () => {
     // 检查登录状态
@@ -302,19 +414,41 @@ const DetailPage = () => {
 
             <View className="flex items-center gap-3">
               <Calendar size={20} color="#6b7280" />
-              <View>
+              <View className="flex-1">
                 <Text className="text-xs text-gray-500 block">入住时间</Text>
                 <Text className="text-sm text-gray-800">{formatDate(checkInTime)}</Text>
               </View>
+              {/* 修改入住日期按钮 */}
+              {checkInId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  onClick={() => handleDateEditClick(hasCheckOut ? 'checkout-checkin' : 'checkin-checkin')}
+                >
+                  <Pencil size={14} color="#6b7280" />
+                </Button>
+              )}
             </View>
 
             {hasCheckOut && (
               <View className="flex items-center gap-3">
                 <LogOut size={20} color="#f97316" />
-                <View>
+                <View className="flex-1">
                   <Text className="text-xs text-gray-500 block">搬离时间</Text>
                   <Text className="text-sm text-orange-600">{formatDate(checkOutTime)}</Text>
                 </View>
+                {/* 修改搬离日期按钮 */}
+                {hasCheckOutId && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => handleDateEditClick('checkout-checkout')}
+                  >
+                    <Pencil size={14} color="#f97316" />
+                  </Button>
+                )}
               </View>
             )}
           </View>
@@ -540,6 +674,85 @@ const DetailPage = () => {
         onConfirm={handleDelete}
         onCancel={() => setShowPasswordDialog(false)}
       />
+
+      {/* 日期修改密码验证对话框 */}
+      <PasswordDialog
+        open={showDatePasswordDialog}
+        title="日期修改验证"
+        confirmText="验证"
+        onConfirm={handleDatePasswordSuccess}
+        onCancel={() => setShowDatePasswordDialog(false)}
+      />
+
+      {/* 日期修改对话框 */}
+      <Dialog open={showDateEditDialog} onOpenChange={setShowDateEditDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{getDateEditDialogTitle()}</DialogTitle>
+          </DialogHeader>
+          <View className="py-4">
+            <View className="space-y-4">
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-sm text-gray-600 block">
+                  姓名: <Text className="text-blue-600 font-medium">{decodedName}</Text>
+                </Text>
+              </View>
+
+              {/* 入住日期编辑 */}
+              {(dateEditType === 'checkin-checkin' || dateEditType === 'checkout-checkin') && (
+                <View>
+                  <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                    <Calendar size={14} color="#6b7280" />
+                    <Text>入住日期</Text>
+                  </Text>
+                  <Picker
+                    mode="date"
+                    value={editCheckInDate}
+                    onChange={(e) => setEditCheckInDate(e.detail.value)}
+                  >
+                    <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <Text className={editCheckInDate ? 'text-foreground' : 'text-muted-foreground'}>
+                        {editCheckInDate || '请选择入住日期'}
+                      </Text>
+                    </View>
+                  </Picker>
+                </View>
+              )}
+
+              {/* 搬离日期编辑 */}
+              {dateEditType === 'checkout-checkout' && (
+                <View>
+                  <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                    <Calendar size={14} color="#f97316" />
+                    <Text>搬离日期</Text>
+                  </Text>
+                  <Picker
+                    mode="date"
+                    value={editCheckOutDate}
+                    onChange={(e) => setEditCheckOutDate(e.detail.value)}
+                  >
+                    <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      <Text className={editCheckOutDate ? 'text-foreground' : 'text-muted-foreground'}>
+                        {editCheckOutDate || '请选择搬离日期'}
+                      </Text>
+                    </View>
+                  </Picker>
+                </View>
+              )}
+            </View>
+          </View>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDateEditDialog(false)}>取消</Button>
+            <Button
+              className="bg-blue-500 text-white"
+              onClick={handleDateEditSubmit}
+              disabled={submitting}
+            >
+              {submitting ? '处理中...' : '确认修改'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </View>
   )
 }

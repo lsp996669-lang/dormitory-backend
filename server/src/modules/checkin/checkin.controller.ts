@@ -25,4 +25,13 @@ export class CheckInController {
       body.targetBedId
     );
   }
+
+  @Post('update-date')
+  async updateCheckInDate(@Body() body: { checkInId: number; checkInDate: string }) {
+    console.log('更新入住日期请求:', body);
+    return await this.checkInService.updateCheckInDate(
+      body.checkInId,
+      body.checkInDate
+    );
+  }
 }

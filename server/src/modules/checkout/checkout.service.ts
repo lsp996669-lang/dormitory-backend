@@ -170,4 +170,88 @@ export class CheckOutService {
       data: { deletedCount: ids.length },
     };
   }
+
+  /**
+   * 更新搬离记录的入住日期
+   * @param checkOutId 搬离记录ID
+   * @param checkInDate 新的入住日期
+   */
+  async updateCheckInDate(checkOutId: number, checkInDate: string) {
+    const client = getSupabaseClient();
+
+    console.log('更新搬离记录入住日期请求:', { checkOutId, checkInDate });
+
+    // 检查搬离记录是否存在
+    const { data: checkOut, error: checkOutError } = await client
+      .from('check_outs')
+      .select('*')
+      .eq('id', checkOutId)
+      .single();
+
+    if (checkOutError || !checkOut) {
+      throw new Error('搬离记录不存在');
+    }
+
+    // 更新入住日期
+    const checkInTime = new Date(checkInDate).toISOString();
+    const { error: updateError } = await client
+      .from('check_outs')
+      .update({ check_in_time: checkInTime, updated_at: new Date().toISOString() })
+      .eq('id', checkOutId);
+
+    if (updateError) {
+      console.error('更新入住日期失败:', updateError);
+      throw new Error('更新入住日期失败');
+    }
+
+    console.log('更新入住日期成功:', { checkOutId, checkInTime });
+
+    return {
+      code: 200,
+      msg: '更新成功',
+      data: { checkOutId, checkInTime },
+    };
+  }
+
+  /**
+   * 更新搬离日期
+   * @param checkOutId 搬离记录ID
+   * @param checkOutDate 新的搬离日期
+   */
+  async updateCheckOutDate(checkOutId: number, checkOutDate: string) {
+    const client = getSupabaseClient();
+
+    console.log('更新搬离日期请求:', { checkOutId, checkOutDate });
+
+    // 检查搬离记录是否存在
+    const { data: checkOut, error: checkOutError } = await client
+      .from('check_outs')
+      .select('*')
+      .eq('id', checkOutId)
+      .single();
+
+    if (checkOutError || !checkOut) {
+      throw new Error('搬离记录不存在');
+    }
+
+    // 更新搬离日期
+    const checkOutTime = new Date(checkOutDate).toISOString();
+    const { error: updateError } = await client
+      .from('check_outs')
+      .update({ check_out_time: checkOutTime, updated_at: new Date().toISOString() })
+      .eq('id', checkOutId);
+
+    if (updateError) {
+      console.error('更新搬离日期失败:', updateError);
+      throw new Error('更新搬离日期失败');
+    }
+
+    console.log('更新搬离日期成功:', { checkOutId, checkOutTime });
+
+    return {
+      code: 200,
+      msg: '更新成功',
+      data: { checkOutId, checkOutTime },
+    };
+  }
 }

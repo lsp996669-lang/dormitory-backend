@@ -28,4 +28,22 @@ export class CheckOutController {
     console.log('批量删除搬离记录请求:', body.ids);
     return await this.checkOutService.batchDeleteCheckOut(body.ids);
   }
+
+  @Post('update-checkin-date')
+  async updateCheckInDate(@Body() body: { checkOutId: number; checkInDate: string }) {
+    console.log('更新搬离记录入住日期请求:', body);
+    return await this.checkOutService.updateCheckInDate(
+      body.checkOutId,
+      body.checkInDate
+    );
+  }
+
+  @Post('update-checkout-date')
+  async updateCheckOutDate(@Body() body: { checkOutId: number; checkOutDate: string }) {
+    console.log('更新搬离日期请求:', body);
+    return await this.checkOutService.updateCheckOutDate(
+      body.checkOutId,
+      body.checkOutDate
+    );
+  }
 }

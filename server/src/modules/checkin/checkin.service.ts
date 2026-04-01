@@ -187,4 +187,46 @@ export class CheckInService {
       },
     };
   }
+
+  /**
+   * 更新入住日期
+   * @param checkInId 入住记录ID
+   * @param checkInDate 新的入住日期
+   */
+  async updateCheckInDate(checkInId: number, checkInDate: string) {
+    const client = getSupabaseClient();
+
+    console.log('更新入住日期请求:', { checkInId, checkInDate });
+
+    // 检查入住记录是否存在
+    const { data: checkIn, error: checkInError } = await client
+      .from('check_ins')
+      .select('*')
+      .eq('id', checkInId)
+      .single();
+
+    if (checkInError || !checkIn) {
+      throw new Error('入住记录不存在');
+    }
+
+    // 更新入住日期
+    const checkInTime = new Date(checkInDate).toISOString();
+    const { error: updateError } = await client
+      .from('check_ins')
+      .update({ check_in_time: checkInTime, updated_at: new Date().toISOString() })
+      .eq('id', checkInId);
+
+    if (updateError) {
+      console.error('更新入住日期失败:', updateError);
+      throw new Error('更新入住日期失败');
+    }
+
+    console.log('更新入住日期成功:', { checkInId, checkInTime });
+
+    return {
+      code: 200,
+      msg: '更新成功',
+      data: { checkInId, checkInTime },
+    };
+  }
 }
