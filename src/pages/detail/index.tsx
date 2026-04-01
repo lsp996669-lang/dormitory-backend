@@ -39,7 +39,7 @@ const promptLogin = () => {
 interface BedInfo {
   id: number
   floor: number
-  bedNumber: number
+  bed_number: number  // 使用下划线命名，与后端返回一致
   position: string
   status: string
 }
@@ -255,7 +255,7 @@ const DetailPage = () => {
     if (!targetBedId) return '请选择目标床位'
     const bed = availableBeds.find(b => b.id === targetBedId)
     if (!bed) return '请选择目标床位'
-    return `${bed.bedNumber}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    return `${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
   }
 
   return (
@@ -420,7 +420,7 @@ const DetailPage = () => {
                 ) : (
                   <Picker
                     mode="selector"
-                    range={availableBeds.map(b => `${b.bedNumber}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`)}
+                    range={availableBeds.map(b => `${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`)}
                     value={targetBedId ? availableBeds.findIndex(b => b.id === targetBedId) : 0}
                     onChange={(e) => {
                       const selectedBed = availableBeds[e.detail.value]
