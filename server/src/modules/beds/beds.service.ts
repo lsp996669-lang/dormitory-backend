@@ -175,11 +175,14 @@ export class BedsService implements OnModuleInit {
       const occupiedBeds = beds?.filter(b => b.status === 'occupied').length || 0;
       const emptyBeds = totalBeds - occupiedBeds;
 
+      // 四楼的空床不计入统计，但保留入住功能
+      const displayEmptyBeds = floor === 4 ? 0 : emptyBeds;
+
       stats.push({
         floor,
         totalBeds,
         occupiedBeds,
-        emptyBeds,
+        emptyBeds: displayEmptyBeds,
       });
     }
 
