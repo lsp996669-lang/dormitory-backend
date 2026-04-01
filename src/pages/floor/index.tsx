@@ -558,9 +558,9 @@ const FloorPage = () => {
                   <View>
                     <CardTitle className="text-lg">南四巷180号宿舍</CardTitle>
                     <Text className="text-xs text-gray-500">
-                      总床位: {floorStats.reduce((sum, f) => sum + f.totalBeds, 0)} | 
+                      总床位: 80 | 
                       已入住: {floorStats.reduce((sum, f) => sum + f.occupiedBeds, 0)} | 
-                      空床: {floorStats.reduce((sum, f) => sum + f.emptyBeds, 0)}
+                      空床: {80 - floorStats.reduce((sum, f) => sum + f.occupiedBeds, 0)}
                     </Text>
                   </View>
                 </View>
