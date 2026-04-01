@@ -172,15 +172,7 @@ export class CheckInService {
       throw new Error('转移床位失败');
     }
 
-    // 6. 创建转移通知（仅2楼及以上楼层）
-    if (targetBed.floor >= 2) {
-      await this.notificationService.createCheckInNotification({
-        floor: targetBed.floor,
-        bedNumber: targetBed.bed_number,
-        position: targetBed.position,
-        name: checkIn.name,
-      });
-    }
+    // 转移床位不创建通知
 
     console.log('转移床位成功:', { checkInId, oldBedId, targetBedId });
 
