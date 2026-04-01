@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -469,45 +469,68 @@ const FloorPage = () => {
         </View>
       ) : (
         <View className="space-y-4">
-          {floorStats.map((floor) => (
-            <Card key={floor.floor} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <View className="flex items-center gap-3">
-                  <View className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Building size={20} color="#2563eb" />
-                  </View>
-                  <View>
-                    <CardTitle className="text-lg">{floor.floor}楼</CardTitle>
-                    <Text className="text-xs text-gray-500">
-                      总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}
-                    </Text>
+          {/* 南四巷180号宿舍 */}
+          <Card className="overflow-hidden border-2 border-blue-200">
+            <CardHeader className="pb-3 bg-blue-50">
+              <View className="flex items-center gap-3">
+                <View className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <House size={20} color="#2563eb" />
+                </View>
+                <View>
+                  <CardTitle className="text-lg">南四巷180号宿舍</CardTitle>
+                  <Text className="text-xs text-gray-500">
+                    总床位: {floorStats.reduce((sum, f) => sum + f.totalBeds, 0)} | 
+                    已入住: {floorStats.reduce((sum, f) => sum + f.occupiedBeds, 0)} | 
+                    空床: {floorStats.reduce((sum, f) => sum + f.emptyBeds, 0)}
+                  </Text>
+                </View>
+              </View>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {floorStats.map((floor) => (
+                <View 
+                  key={floor.floor} 
+                  className="bg-gray-50 rounded-lg p-3 border border-gray-100"
+                >
+                  <View className="flex items-center justify-between">
+                    <View className="flex items-center gap-3">
+                      <View className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Building size={16} color="#2563eb" />
+                      </View>
+                      <View>
+                        <Text className="text-base font-medium text-gray-800">{floor.floor}楼</Text>
+                        <Text className="text-xs text-gray-500">
+                          总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={() => handleFloorClick(floor.floor)}
+                      >
+                        <View className="flex items-center gap-1">
+                          <Bed size={14} color="#fff" />
+                          <Text className="text-white text-xs">入住</Text>
+                        </View>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleRollCallClick(floor.floor)}
+                      >
+                        <View className="flex items-center gap-1">
+                          <ClipboardCheck size={14} color="#fff" />
+                          <Text className="text-white text-xs">点名</Text>
+                        </View>
+                      </Button>
+                    </View>
                   </View>
                 </View>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <View className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={() => handleFloorClick(floor.floor)}
-                  >
-                    <View className="flex items-center gap-1">
-                      <Bed size={16} color="#fff" />
-                      <Text className="text-white text-sm">入住</Text>
-                    </View>
-                  </Button>
-                  <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => handleRollCallClick(floor.floor)}
-                  >
-                    <View className="flex items-center gap-1">
-                      <ClipboardCheck size={16} color="#fff" />
-                      <Text className="text-white text-sm">点名</Text>
-                    </View>
-                  </Button>
-                </View>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </CardContent>
+          </Card>
         </View>
       )}
     </View>

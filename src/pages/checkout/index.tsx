@@ -4,7 +4,7 @@ import Taro, { useDidShow } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Network } from '@/network'
-import { LogOut, Calendar, Bed, Building, User, ChevronDown, ChevronUp, Trash2, X } from 'lucide-react-taro'
+import { LogOut, Calendar, Bed, Building, User, ChevronDown, ChevronUp, Trash2, X, House } from 'lucide-react-taro'
 import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
 
@@ -47,6 +47,7 @@ const CheckOutPage = () => {
   const [records, setRecords] = useState<CheckOutRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedFloor, setExpandedFloor] = useState<number | null>(null)
+  const [expandedDormitory, setExpandedDormitory] = useState<boolean>(true) // 南四巷180号宿舍展开状态
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [deleting, setDeleting] = useState(false)
@@ -312,106 +313,143 @@ const CheckOutPage = () => {
             </View>
           )}
 
-          {floors.map((floor) => (
-            <Card key={floor} className="overflow-hidden">
-              <CardHeader 
-                className="pb-3 bg-gray-50 cursor-pointer"
-                onClick={() => !isSelectMode && toggleFloor(floor)}
-              >
-                <View className="flex items-center justify-between">
-                  <View className="flex items-center gap-2">
-                    <View className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                      <Building size={20} color="#f97316" />
-                    </View>
-                    <View>
-                      <CardTitle className="text-lg">{floor}楼</CardTitle>
-                      <Text className="text-xs text-gray-500">
-                        {groupedByFloor[floor].length} 条搬离记录
-                      </Text>
-                    </View>
+          {/* 南四巷180号宿舍 */}
+          <Card className="overflow-hidden border-2 border-orange-200">
+            <CardHeader 
+              className="pb-3 bg-orange-50 cursor-pointer"
+              onClick={() => !isSelectMode && setExpandedDormitory(!expandedDormitory)}
+            >
+              <View className="flex items-center justify-between">
+                <View className="flex items-center gap-3">
+                  <View className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                    <House size={20} color="#f97316" />
                   </View>
-                  {!isSelectMode && (
-                    <View className="flex items-center">
-                      {expandedFloor === floor ? (
-                        <ChevronUp size={20} color="#6b7280" />
-                      ) : (
-                        <ChevronDown size={20} color="#6b7280" />
-                      )}
-                    </View>
-                  )}
+                  <View>
+                    <CardTitle className="text-lg">南四巷180号宿舍</CardTitle>
+                    <Text className="text-xs text-gray-500">
+                      共 {records.length} 条搬离记录
+                    </Text>
+                  </View>
                 </View>
-              </CardHeader>
-              
-              {(expandedFloor === floor || isSelectMode) && (
-                <CardContent className="p-3 space-y-3 border-t border-gray-200">
-                  {groupedByFloor[floor].map((record) => (
-                    <View
-                      key={record.id}
-                      className={`bg-gray-50 rounded-lg p-3 border ${
-                        selectedIds.has(record.id) 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-100'
-                      }`}
+                {!isSelectMode && (
+                  <View className="flex items-center">
+                    {expandedDormitory ? (
+                      <ChevronUp size={20} color="#6b7280" />
+                    ) : (
+                      <ChevronDown size={20} color="#6b7280" />
+                    )}
+                  </View>
+                )}
+              </View>
+            </CardHeader>
+            
+            {(expandedDormitory || isSelectMode) && (
+              <CardContent className="p-4 space-y-3">
+                {floors.map((floor) => (
+                  <View key={floor} className="border border-gray-100 rounded-lg overflow-hidden">
+                    {/* 楼层标题 */}
+                    <View 
+                      className="bg-gray-50 px-3 py-2 cursor-pointer"
+                      onClick={() => !isSelectMode && toggleFloor(floor)}
                     >
-                      {isSelectMode && (
-                        <View className="flex items-center gap-2 mb-2">
-                          <Checkbox
-                            value={String(record.id)}
-                            checked={selectedIds.has(record.id)}
-                            onClick={() => toggleSelect(record.id)}
-                            color="#1890ff"
-                          />
-                          <Text className="text-sm text-gray-700 font-medium">
-                            {record.name}
-                          </Text>
-                        </View>
-                      )}
-                      
-                      {/* 床位信息 */}
-                      <View className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
-                        <Bed size={14} color="#6b7280" />
-                        <Text className="text-sm text-gray-700 font-medium">
-                          {record.bedNumber || '-'}号床，{getPositionLabel(record.position)}
-                        </Text>
-                      </View>
-
-                      {/* 人员信息 */}
-                      <View className="space-y-2">
-                        <View className="flex items-center justify-between">
-                          <View className="flex items-center gap-1">
-                            <User size={12} color="#9ca3af" />
-                            <Text className="text-xs text-gray-500">姓名</Text>
+                      <View className="flex items-center justify-between">
+                        <View className="flex items-center gap-2">
+                          <View className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                            <Building size={16} color="#f97316" />
                           </View>
-                          <Text
-                            className="text-sm text-blue-600 font-medium"
-                            onClick={() => handleNameClick(record)}
-                          >
-                            {record.name}
-                          </Text>
-                        </View>
-
-                        <View className="flex items-center justify-between">
-                          <View className="flex items-center gap-1">
-                            <Calendar size={12} color="#9ca3af" />
-                            <Text className="text-xs text-gray-500">入住日期</Text>
+                          <View>
+                            <Text className="text-base font-medium text-gray-800">{floor}楼</Text>
+                            <Text className="text-xs text-gray-500">
+                              {groupedByFloor[floor].length} 条搬离记录
+                            </Text>
                           </View>
-                          <Text className="text-xs text-gray-700">{formatDate(record.checkInTime)}</Text>
                         </View>
-
-                        <View className="flex items-center justify-between">
-                          <View className="flex items-center gap-1">
-                            <LogOut size={12} color="#f97316" />
-                            <Text className="text-xs text-gray-500">搬离日期</Text>
+                        {!isSelectMode && (
+                          <View className="flex items-center">
+                            {expandedFloor === floor ? (
+                              <ChevronUp size={16} color="#6b7280" />
+                            ) : (
+                              <ChevronDown size={16} color="#6b7280" />
+                            )}
                           </View>
-                          <Text className="text-xs text-orange-600">{formatDate(record.checkOutTime)}</Text>
-                        </View>
+                        )}
                       </View>
                     </View>
-                  ))}
-                </CardContent>
-              )}
-            </Card>
-          ))}
+                    
+                    {/* 楼层记录列表 */}
+                    {(expandedFloor === floor || isSelectMode) && (
+                      <View className="p-3 space-y-3 bg-white">
+                        {groupedByFloor[floor].map((record) => (
+                          <View
+                            key={record.id}
+                            className={`bg-gray-50 rounded-lg p-3 border ${
+                              selectedIds.has(record.id) 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-100'
+                            }`}
+                          >
+                            {isSelectMode && (
+                              <View className="flex items-center gap-2 mb-2">
+                                <Checkbox
+                                  value={String(record.id)}
+                                  checked={selectedIds.has(record.id)}
+                                  onClick={() => toggleSelect(record.id)}
+                                  color="#1890ff"
+                                />
+                                <Text className="text-sm text-gray-700 font-medium">
+                                  {record.name}
+                                </Text>
+                              </View>
+                            )}
+                            
+                            {/* 床位信息 */}
+                            <View className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+                              <Bed size={14} color="#6b7280" />
+                              <Text className="text-sm text-gray-700 font-medium">
+                                {record.bedNumber || '-'}号床，{getPositionLabel(record.position)}
+                              </Text>
+                            </View>
+
+                            {/* 人员信息 */}
+                            <View className="space-y-2">
+                              <View className="flex items-center justify-between">
+                                <View className="flex items-center gap-1">
+                                  <User size={12} color="#9ca3af" />
+                                  <Text className="text-xs text-gray-500">姓名</Text>
+                                </View>
+                                <Text
+                                  className="text-sm text-blue-600 font-medium"
+                                  onClick={() => handleNameClick(record)}
+                                >
+                                  {record.name}
+                                </Text>
+                              </View>
+
+                              <View className="flex items-center justify-between">
+                                <View className="flex items-center gap-1">
+                                  <Calendar size={12} color="#9ca3af" />
+                                  <Text className="text-xs text-gray-500">入住日期</Text>
+                                </View>
+                                <Text className="text-xs text-gray-700">{formatDate(record.checkInTime)}</Text>
+                              </View>
+
+                              <View className="flex items-center justify-between">
+                                <View className="flex items-center gap-1">
+                                  <LogOut size={12} color="#f97316" />
+                                  <Text className="text-xs text-gray-500">搬离日期</Text>
+                                </View>
+                                <Text className="text-xs text-orange-600">{formatDate(record.checkOutTime)}</Text>
+                              </View>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </CardContent>
+            )}
+          </Card>
         </View>
       )}
 
