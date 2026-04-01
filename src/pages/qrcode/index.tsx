@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Download, Users, UserMinus, FileSpreadsheet, Building, RefreshCw, FolderOpen, Upload, Save } from 'lucide-react-taro'
+import { Download, Building, RefreshCw, FolderOpen } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -39,13 +39,6 @@ interface ExportStats {
   }>
 }
 
-// 导出类型名称映射
-const EXPORT_TYPE_NAMES: Record<string, string> = {
-  checkin: '入住人员',
-  checkout: '搬离人员',
-  all: '全部数据'
-}
-
 const ExportPage = () => {
   const [stats, setStats] = useState<ExportStats | null>(null)
   const [loading, setLoading] = useState(false)
@@ -78,33 +71,34 @@ const ExportPage = () => {
   /**
    * 生成文件名
    */
-  const generateFileName = (type: string): string => {
+  const generateFileName = (dormitory: string): string => {
     const now = new Date()
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
     const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
-    return `宿舍管理_${EXPORT_TYPE_NAMES[type]}_${dateStr}_${timeStr}.xlsx`
+    const dormitoryName = dormitory === 'nansi' ? '南四巷180号' : '南二巷'
+    return `${dormitoryName}宿舍数据_${dateStr}_${timeStr}.xlsx`
   }
 
   /**
    * 处理导出
    */
-  const handleExport = async (type: 'checkin' | 'checkout' | 'all') => {
+  const handleExport = async (dormitory: 'nansi' | 'nantwo') => {
     // 检查登录状态
     if (!checkLogin()) {
       promptLogin()
       return
     }
     
-    setExporting(type)
+    setExporting(dormitory)
     
     try {
-      console.log(`[Export] 开始导出 ${type} 数据...`)
+      console.log(`[Export] 开始导出 ${dormitory} 数据...`)
       
       // 显示加载提示
       Taro.showLoading({ title: '正在导出...', mask: true })
 
-      const url = `/api/export/${type}`
-      const fileName = generateFileName(type)
+      const url = `/api/export/${dormitory}`
+      const fileName = generateFileName(dormitory)
 
       // 1. 下载文件到临时目录
       console.log('[Export] 下载文件:', url)
@@ -218,28 +212,57 @@ const ExportPage = () => {
         <Text className="text-sm text-gray-500 block mt-1">导出宿舍管理数据到Excel</Text>
       </View>
 
-      {/* 快捷保存按钮 */}
+      {/* 快捷保存按钮 - 南四巷180号 */}
       <Card className="overflow-hidden mb-4 border-2 border-blue-200 bg-blue-50">
         <CardContent className="p-4">
           <View className="flex items-center justify-between">
             <View className="flex items-center gap-3">
               <View className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-                <Save size={24} color="#fff" />
+                <Building size={24} color="#fff" />
               </View>
               <View>
-                <Text className="text-base font-semibold text-gray-800">保存全部数据</Text>
-                <Text className="text-xs text-gray-500">一键导出入住+搬离人员信息</Text>
+                <Text className="text-base font-semibold text-gray-800">南四巷180号宿舍</Text>
+                <Text className="text-xs text-gray-500">全部数据保存</Text>
               </View>
             </View>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-              onClick={() => handleExport('all')}
+              onClick={() => handleExport('nansi')}
               disabled={exporting !== null}
             >
               <View className="flex items-center justify-center gap-2">
                 <Download size={16} color="#fff" />
                 <Text className="text-white font-medium">
-                  {exporting === 'all' ? '保存中...' : '保存'}
+                  {exporting === 'nansi' ? '保存中...' : '保存'}
+                </Text>
+              </View>
+            </Button>
+          </View>
+        </CardContent>
+      </Card>
+
+      {/* 快捷保存按钮 - 南二巷 */}
+      <Card className="overflow-hidden mb-4 border-2 border-green-200 bg-green-50">
+        <CardContent className="p-4">
+          <View className="flex items-center justify-between">
+            <View className="flex items-center gap-3">
+              <View className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center">
+                <Building size={24} color="#fff" />
+              </View>
+              <View>
+                <Text className="text-base font-semibold text-gray-800">南二巷宿舍</Text>
+                <Text className="text-xs text-gray-500">全部数据保存</Text>
+              </View>
+            </View>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white px-6"
+              onClick={() => handleExport('nantwo')}
+              disabled={exporting !== null}
+            >
+              <View className="flex items-center justify-center gap-2">
+                <Download size={16} color="#fff" />
+                <Text className="text-white font-medium">
+                  {exporting === 'nantwo' ? '保存中...' : '保存'}
                 </Text>
               </View>
             </Button>
@@ -299,114 +322,6 @@ const ExportPage = () => {
         </CardContent>
       </Card>
 
-      {/* 导出按钮 */}
-      <View className="space-y-3">
-        {/* 导出入住人员 */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-4">
-            <View className="flex items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <Users size={20} color="#2563eb" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">导出入住人员</Text>
-                <Text className="text-xs text-gray-500">当前所有入住人员名单</Text>
-              </View>
-            </View>
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => handleExport('checkin')}
-              disabled={exporting !== null}
-            >
-              <View className="flex items-center justify-center gap-2">
-                <Download size={16} color="#fff" />
-                <Text className="text-white">
-                  {exporting === 'checkin' ? '导出中...' : '导出Excel'}
-                </Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 导出搬离人员 */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-4">
-            <View className="flex items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <UserMinus size={20} color="#22c55e" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">导出搬离人员</Text>
-                <Text className="text-xs text-gray-500">历史搬离人员记录</Text>
-              </View>
-            </View>
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => handleExport('checkout')}
-              disabled={exporting !== null}
-            >
-              <View className="flex items-center justify-center gap-2">
-                <Download size={16} color="#fff" />
-                <Text className="text-white">
-                  {exporting === 'checkout' ? '导出中...' : '导出Excel'}
-                </Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 导出全部数据 */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-4">
-            <View className="flex items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <FileSpreadsheet size={20} color="#9333ea" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">导出全部数据</Text>
-                <Text className="text-xs text-gray-500">入住+搬离+统计汇总</Text>
-              </View>
-            </View>
-            <Button
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-              onClick={() => handleExport('all')}
-              disabled={exporting !== null}
-            >
-              <View className="flex items-center justify-center gap-2">
-                <Download size={16} color="#fff" />
-                <Text className="text-white">
-                  {exporting === 'all' ? '导出中...' : '导出Excel'}
-                </Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 数据导入 */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-4">
-            <View className="flex items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <Upload size={20} color="#f97316" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">数据导入</Text>
-                <Text className="text-xs text-gray-500">从Excel文件导入入住人员</Text>
-              </View>
-            </View>
-            <Button
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={() => Taro.navigateTo({ url: '/pages/import/index' })}
-            >
-              <View className="flex items-center justify-center gap-2">
-                <Upload size={16} color="#fff" />
-                <Text className="text-white">进入导入</Text>
-              </View>
-            </Button>
-          </CardContent>
-        </Card>
-      </View>
-
       {/* 使用说明 */}
       <Card className="overflow-hidden mt-4">
         <CardContent className="p-4">
@@ -414,7 +329,7 @@ const ExportPage = () => {
           <View className="space-y-2">
             <View className="flex items-start gap-2">
               <Text className="text-xs text-gray-500">1.</Text>
-              <Text className="text-xs text-gray-500 flex-1">点击导出按钮，等待文件生成</Text>
+              <Text className="text-xs text-gray-500 flex-1">点击保存按钮，等待文件生成</Text>
             </View>
             <View className="flex items-start gap-2">
               <Text className="text-xs text-gray-500">2.</Text>

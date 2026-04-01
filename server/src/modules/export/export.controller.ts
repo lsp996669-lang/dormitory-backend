@@ -1,4 +1,4 @@
-import { Controller, Get, Res, Query } from '@nestjs/common';
+import { Controller, Get, Res, Query, Param } from '@nestjs/common';
 import { Response } from 'express';
 import { ExportService } from './export.service';
 
@@ -45,6 +45,36 @@ export class ExportController {
     
     const buffer = await this.exportService.exportAllData();
     const filename = `宿舍管理数据_${this.getDateStr()}.xlsx`;
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.send(buffer);
+  }
+
+  /**
+   * 导出南四巷180号宿舍全部数据
+   */
+  @Get('nansi')
+  async exportNanSi(@Res() res: Response) {
+    console.log('导出南四巷180号宿舍数据请求');
+    
+    const buffer = await this.exportService.exportDormitoryData('nansi');
+    const filename = `南四巷180号宿舍数据_${this.getDateStr()}.xlsx`;
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.send(buffer);
+  }
+
+  /**
+   * 导出南二巷宿舍全部数据
+   */
+  @Get('nantwo')
+  async exportNanTwo(@Res() res: Response) {
+    console.log('导出南二巷宿舍数据请求');
+    
+    const buffer = await this.exportService.exportDormitoryData('nantwo');
+    const filename = `南二巷宿舍数据_${this.getDateStr()}.xlsx`;
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
