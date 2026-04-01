@@ -89,7 +89,7 @@ export class BedsService implements OnModuleInit {
           bed_number: bedNum,
           position: 'upper',
           status: 'empty',
-          dormitory: 'nanfour_180',
+          dormitory: 'nansi',
           room: '',
         });
         beds.push({
@@ -97,7 +97,7 @@ export class BedsService implements OnModuleInit {
           bed_number: bedNum,
           position: 'lower',
           status: 'empty',
-          dormitory: 'nanfour_180',
+          dormitory: 'nansi',
           room: '',
         });
       }

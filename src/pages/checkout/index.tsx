@@ -84,7 +84,7 @@ const CheckOutPage = () => {
           floor: record.floor,
           bedNumber: record.bedNumber || record.bed_number,
           position: record.position,
-          dormitory: record.dormitory || 'nanfour_180',
+          dormitory: record.dormitory || 'nansi',
           room: record.room
         }))
         setRecords(formattedRecords)
@@ -145,7 +145,7 @@ const CheckOutPage = () => {
   }
 
   // 按宿舍区域分组
-  const nanFourRecords = records.filter(r => r.dormitory === 'nanfour_180' || !r.dormitory)
+  const nanFourRecords = records.filter(r => r.dormitory === 'nansi' || r.dormitory === 'nanfour_180' || !r.dormitory)
   const nanTwoRecords = records.filter(r => r.dormitory === 'nantwo')
 
   // 按楼层分组 - 南四巷

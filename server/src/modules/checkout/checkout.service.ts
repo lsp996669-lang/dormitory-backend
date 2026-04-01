@@ -110,7 +110,7 @@ export class CheckOutService {
         floor: bed?.floor,
         bedNumber: bed?.bed_number,
         position: bed?.position,
-        dormitory: bed?.dormitory || 'nanfour_180',
+        dormitory: bed?.dormitory || 'nansi',
         room: bed?.room,
       };
     });
