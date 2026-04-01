@@ -71,11 +71,12 @@ const FloorPage = () => {
       })
   })
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
   const checkAuth = () => {
     const userInfo = Taro.getStorageSync('userInfo')
-    if (!userInfo) {
-      Taro.redirectTo({ url: '/pages/login/index' })
-    }
+    setIsLoggedIn(!!userInfo)
+    // 不强制跳转登录页，允许用户先浏览
   }
 
   const loadFloorStats = async () => {
@@ -170,12 +171,38 @@ const FloorPage = () => {
   }
 
   const handleFloorClick = (floor: number) => {
+    if (!isLoggedIn) {
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再进行入住操作',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: '/pages/login/index' })
+          }
+        }
+      })
+      return
+    }
     Taro.navigateTo({
       url: `/pages/checkin/index?floor=${floor}`
     })
   }
 
   const handleRollCallClick = (floor: number) => {
+    if (!isLoggedIn) {
+      Taro.showModal({
+        title: '提示',
+        content: '请先登录后再进行点名操作',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({ url: '/pages/login/index' })
+          }
+        }
+      })
+      return
+    }
     Taro.navigateTo({
       url: `/pages/rollcall/index?floor=${floor}`
     })
@@ -244,29 +271,92 @@ const FloorPage = () => {
             <Text className="text-2xl font-bold text-gray-800 block">宿舍管理</Text>
             <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住登记</Text>
           </View>
-          {/* 服务状态指示器 */}
+          {/* 用户登录状态 */}
           <View 
             className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
-            style={{ backgroundColor: serverStatus === 'online' ? '#dcfce7' : serverStatus === 'offline' ? '#fee2e2' : '#fef3c7' }}
-            onClick={checkServerStatus}
+            style={{ backgroundColor: isLoggedIn ? '#dcfce7' : '#fef3c7' }}
+            onClick={() => {
+              if (isLoggedIn) {
+                Taro.showModal({
+                  title: '提示',
+                  content: '确定要退出登录吗？',
+                  success: (res) => {
+                    if (res.confirm) {
+                      Taro.removeStorageSync('userInfo')
+                      setIsLoggedIn(false)
+                      Taro.showToast({ title: '已退出登录', icon: 'success' })
+                    }
+                  }
+                })
+              } else {
+                Taro.navigateTo({ url: '/pages/login/index' })
+              }
+            }}
           >
-            {serverStatus === 'online' ? (
+            {isLoggedIn ? (
               <>
-                <Wifi size={16} color="#16a34a" />
-                <Text className="text-xs" style={{ color: '#16a34a' }}>服务正常</Text>
-              </>
-            ) : serverStatus === 'offline' ? (
-              <>
-                <WifiOff size={16} color="#dc2626" />
-                <Text className="text-xs" style={{ color: '#dc2626' }}>服务离线</Text>
+                <User size={16} color="#16a34a" />
+                <Text className="text-xs" style={{ color: '#16a34a' }}>已登录</Text>
               </>
             ) : (
               <>
-                <RefreshCw size={16} color="#d97706" className="animate-spin" />
-                <Text className="text-xs" style={{ color: '#d97706' }}>检测中...</Text>
+                <User size={16} color="#d97706" />
+                <Text className="text-xs" style={{ color: '#d97706' }}>点击登录</Text>
               </>
             )}
           </View>
+        </View>
+      </View>
+
+      {/* 未登录提示 */}
+      {!isLoggedIn && (
+        <Card className="overflow-hidden mb-4 border-2 border-amber-200 bg-amber-50">
+          <CardContent className="p-4">
+            <View className="flex items-center gap-3">
+              <View className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <User size={20} color="#d97706" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-amber-800">您可以先浏览系统功能</Text>
+                <Text className="text-xs text-amber-600 mt-1">
+                  需要入住、搬离等操作时再登录即可
+                </Text>
+              </View>
+              <Button
+                size="sm"
+                className="bg-amber-600 text-white"
+                onClick={() => Taro.navigateTo({ url: '/pages/login/index' })}
+              >
+                登录
+              </Button>
+            </View>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 服务状态指示器 */}
+      <View className="mb-4">
+        <View 
+          className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer inline-flex"
+          style={{ backgroundColor: serverStatus === 'online' ? '#dcfce7' : serverStatus === 'offline' ? '#fee2e2' : '#fef3c7' }}
+          onClick={checkServerStatus}
+        >
+          {serverStatus === 'online' ? (
+            <>
+              <Wifi size={16} color="#16a34a" />
+              <Text className="text-xs" style={{ color: '#16a34a' }}>服务正常</Text>
+            </>
+          ) : serverStatus === 'offline' ? (
+            <>
+              <WifiOff size={16} color="#dc2626" />
+              <Text className="text-xs" style={{ color: '#dc2626' }}>服务离线</Text>
+            </>
+          ) : (
+            <>
+              <RefreshCw size={16} color="#d97706" />
+              <Text className="text-xs" style={{ color: '#d97706' }}>检测中...</Text>
+            </>
+          )}
         </View>
       </View>
 

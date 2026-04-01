@@ -13,8 +13,8 @@ const path = require('path')
   try {
     const uploadResult = await ci.upload({
       project,
-      version: '1.0.1',
-      desc: '修复审核被拒问题，移除测试内容',
+      version: '1.0.2',
+      desc: '修复登录流程，允许用户先浏览再登录',
       setting: {
         es6: false,
         es7: false,
