@@ -7,6 +7,27 @@ import { Download, Users, UserMinus, FileSpreadsheet, Building, RefreshCw, Folde
 import { Network } from '@/network'
 import './index.css'
 
+// 检查登录状态的工具函数
+const checkLogin = (): boolean => {
+  const userInfo = Taro.getStorageSync('userInfo')
+  return !!userInfo
+}
+
+// 提示登录
+const promptLogin = () => {
+  Taro.showModal({
+    title: '提示',
+    content: '此功能需要登录后才能使用，是否立即登录？',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        Taro.navigateTo({ url: '/pages/login/index' })
+      }
+    }
+  })
+}
+
 interface ExportStats {
   checkInCount: number
   checkOutCount: number
@@ -68,6 +89,12 @@ const ExportPage = () => {
    * 处理导出
    */
   const handleExport = async (type: 'checkin' | 'checkout' | 'all') => {
+    // 检查登录状态
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    
     setExporting(type)
     
     try {

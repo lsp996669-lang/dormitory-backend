@@ -7,6 +7,27 @@ import { Network } from '@/network'
 import { User, Check, X, Users } from 'lucide-react-taro'
 import './index.css'
 
+// 检查登录状态的工具函数
+const checkLogin = (): boolean => {
+  const userInfo = Taro.getStorageSync('userInfo')
+  return !!userInfo
+}
+
+// 提示登录
+const promptLogin = () => {
+  Taro.showModal({
+    title: '提示',
+    content: '此功能需要登录后才能使用，是否立即登录？',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        Taro.navigateTo({ url: '/pages/login/index' })
+      }
+    }
+  })
+}
+
 interface RollCallItem {
   checkInId: number
   bedId: number
@@ -103,6 +124,12 @@ const RollCallPage = () => {
   }
 
   const handleMarkRollCall = async (item: RollCallItem, status: 'present' | 'absent') => {
+    // 检查登录状态
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    
     setSubmitting(true)
     try {
       const res = await Network.request({
@@ -148,6 +175,12 @@ const RollCallPage = () => {
   }
 
   const handleBatchRollCall = async (status: 'present' | 'absent') => {
+    // 检查登录状态
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    
     // 只对未点名的人员进行批量操作
     const uncheckedItems = rollCallList.filter(item => !item.status)
     

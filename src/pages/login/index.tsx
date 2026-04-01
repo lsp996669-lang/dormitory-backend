@@ -2,9 +2,9 @@ import { View, Text } from '@tarojs/components'
 import { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Network } from '@/network'
-import { Building, LogIn, Check } from 'lucide-react-taro'
+import { Building, Check, User } from 'lucide-react-taro'
 import './index.css'
 
 interface UserInfo {
@@ -102,37 +102,18 @@ const LoginPage = () => {
     Taro.switchTab({ url: '/pages/floor/index' })
   }
 
-  if (isLoggedIn) {
-    return (
-      <View className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <View className="mb-8">
-          <Building size={64} color="#2563eb" />
-        </View>
-
-        <Text className="text-2xl font-bold text-gray-800 mb-2">宿舍管理系统</Text>
-        <Text className="text-sm text-gray-500 mb-8">欢迎使用</Text>
-
-        <Card className="w-full max-w-sm">
-          <CardHeader className="text-center">
-            <View className="flex justify-center mb-4">
-              <Check size={48} color="#22c55e" />
-            </View>
-            <CardTitle className="text-lg">登录成功</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Text className="text-sm text-gray-500 block mb-4">
-              您已成功登录，可以开始使用系统
-            </Text>
-            <Button 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleEnterSystem}
-            >
-              进入系统
-            </Button>
-          </CardContent>
-        </Card>
-      </View>
-    )
+  const handleLogout = () => {
+    Taro.showModal({
+      title: '提示',
+      content: '确定要退出登录吗？',
+      success: (res) => {
+        if (res.confirm) {
+          Taro.removeStorageSync('userInfo')
+          setIsLoggedIn(false)
+          Taro.showToast({ title: '已退出登录', icon: 'success' })
+        }
+      }
+    })
   }
 
   return (
@@ -142,24 +123,72 @@ const LoginPage = () => {
       </View>
 
       <Text className="text-2xl font-bold text-gray-800 mb-2">宿舍管理系统</Text>
-      <Text className="text-sm text-gray-500 mb-8">欢迎使用</Text>
+      <Text className="text-sm text-gray-500 mb-8">企业内部宿舍入住与搬离管理</Text>
 
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm mb-4">
         <CardContent className="p-6">
+          {/* 功能说明 */}
+          <View className="mb-6">
+            <Text className="block text-base font-medium text-gray-800 mb-3">系统功能</Text>
+            <View className="space-y-2">
+              <View className="flex items-center gap-2">
+                <View className="w-2 h-2 rounded-full bg-blue-500" />
+                <Text className="text-sm text-gray-600">楼层床铺可视化管理</Text>
+              </View>
+              <View className="flex items-center gap-2">
+                <View className="w-2 h-2 rounded-full bg-blue-500" />
+                <Text className="text-sm text-gray-600">入住登记与搬离管理</Text>
+              </View>
+              <View className="flex items-center gap-2">
+                <View className="w-2 h-2 rounded-full bg-blue-500" />
+                <Text className="text-sm text-gray-600">数据导出与点名功能</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 进入系统按钮 */}
           <Button 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={handleLogin}
-            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white mb-3"
+            onClick={handleEnterSystem}
           >
             <View className="flex items-center gap-2">
-              <LogIn size={20} color="#fff" />
-              <Text className="text-white font-medium">
-                {loading ? '登录中...' : '微信登录'}
-              </Text>
+              <Building size={20} color="#fff" />
+              <Text className="text-white font-medium">进入系统</Text>
             </View>
           </Button>
+
+          {/* 登录/退出按钮 */}
+          {isLoggedIn ? (
+            <View className="flex items-center justify-between bg-green-50 rounded-lg p-3">
+              <View className="flex items-center gap-2">
+                <Check size={16} color="#16a34a" />
+                <Text className="text-sm text-green-700">已登录</Text>
+              </View>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleLogout}
+              >
+                <Text className="text-sm text-gray-500">退出登录</Text>
+              </Button>
+            </View>
+          ) : (
+            <Button 
+              className="w-full bg-gray-100 hover:bg-gray-200"
+              onClick={handleLogin}
+              disabled={loading}
+            >
+              <View className="flex items-center gap-2">
+                <User size={18} color="#6b7280" />
+                <Text className="text-gray-700 font-medium">
+                  {loading ? '登录中...' : '管理员登录'}
+                </Text>
+              </View>
+            </Button>
+          )}
+
           <Text className="block text-center text-xs text-gray-400 mt-3">
-            点击按钮使用微信授权登录
+            您可以先浏览系统功能，需要操作时再登录
           </Text>
         </CardContent>
       </Card>

@@ -17,6 +17,27 @@ import { Network } from '@/network'
 import { Bed, User, Phone, CreditCard, Calendar } from 'lucide-react-taro'
 import './index.css'
 
+// 检查登录状态的工具函数
+const checkLogin = (): boolean => {
+  const userInfo = Taro.getStorageSync('userInfo')
+  return !!userInfo
+}
+
+// 提示登录
+const promptLogin = () => {
+  Taro.showModal({
+    title: '提示',
+    content: '此功能需要登录后才能使用，是否立即登录？',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        Taro.navigateTo({ url: '/pages/login/index' })
+      }
+    }
+  })
+}
+
 interface BedInfo {
   id: number
   floor: number
@@ -145,6 +166,11 @@ const CheckInPage = () => {
 
   const handleBedClick = (bed: BedInfo) => {
     if (bed.status === 'empty') {
+      // 检查登录状态
+      if (!checkLogin()) {
+        promptLogin()
+        return
+      }
       setSelectedBed(bed)
       // 设置默认入住日期为今天
       const today = new Date()
@@ -157,7 +183,7 @@ const CheckInPage = () => {
       })
       setShowForm(true)
     } else {
-      // 已入住的床位，点击名字查看详情
+      // 已入住的床位，点击名字查看详情（不需要登录）
       if (bed.checkIn) {
         Taro.navigateTo({
           url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}`

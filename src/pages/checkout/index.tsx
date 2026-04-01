@@ -8,6 +8,27 @@ import { LogOut, Calendar, Bed, Building, User, ChevronDown, ChevronUp, Trash2, 
 import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
 
+// 检查登录状态的工具函数
+const checkLogin = (): boolean => {
+  const userInfo = Taro.getStorageSync('userInfo')
+  return !!userInfo
+}
+
+// 提示登录
+const promptLogin = () => {
+  Taro.showModal({
+    title: '提示',
+    content: '此功能需要登录后才能使用，是否立即登录？',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        Taro.navigateTo({ url: '/pages/login/index' })
+      }
+    }
+  })
+}
+
 interface CheckOutRecord {
   id: number
   checkInId: number
@@ -154,6 +175,11 @@ const CheckOutPage = () => {
   }
 
   const enterSelectMode = () => {
+    // 检查登录状态
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
     setIsSelectMode(true)
     setSelectedIds(new Set())
   }

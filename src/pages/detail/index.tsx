@@ -15,6 +15,27 @@ import { Network } from '@/network'
 import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
 
+// 检查登录状态的工具函数
+const checkLogin = (): boolean => {
+  const userInfo = Taro.getStorageSync('userInfo')
+  return !!userInfo
+}
+
+// 提示登录
+const promptLogin = () => {
+  Taro.showModal({
+    title: '提示',
+    content: '此功能需要登录后才能使用，是否立即登录？',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        Taro.navigateTo({ url: '/pages/login/index' })
+      }
+    }
+  })
+}
+
 const DetailPage = () => {
   const router = useRouter()
   const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId } = router.params
@@ -51,6 +72,12 @@ const DetailPage = () => {
   const hasCheckOutId = checkOutId && checkOutId !== 'undefined'
 
   const handleCheckOut = async () => {
+    // 检查登录状态
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    
     if (!checkInId || !bedId) {
       Taro.showToast({ title: '缺少必要参数', icon: 'none' })
       return
@@ -94,6 +121,11 @@ const DetailPage = () => {
 
   // 点击删除按钮，先弹出密码验证
   const handleDeleteClick = () => {
+    // 检查登录状态
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
     setShowPasswordDialog(true)
   }
 
