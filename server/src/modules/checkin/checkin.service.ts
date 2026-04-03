@@ -253,4 +253,92 @@ export class CheckInService {
       data: { checkInId, checkInTime },
     };
   }
+
+  /**
+   * 搜索入住人员
+   * @param keyword 搜索关键词（姓名、手机号、身份证号）
+   */
+  async searchResident(keyword: string) {
+    const client = getSupabaseClient();
+
+    if (!keyword || keyword.trim() === '') {
+      return {
+        code: 200,
+        msg: '获取成功',
+        data: [],
+      };
+    }
+
+    const searchTerm = keyword.trim();
+    console.log('[CheckInService] 搜索关键词:', searchTerm);
+
+    // 搜索入住记录（支持姓名、手机号、身份证号）
+    // 对于姓名，使用 ilike 进行模糊匹配（按顺序包含关键词）
+    const { data: checkIns, error } = await client
+      .from('check_ins')
+      .select(`
+        id,
+        name,
+        id_card,
+        phone,
+        check_in_time,
+        bed_id
+      `)
+      .is('check_out_time', null) // 只搜索未搬离的
+      .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,id_card.ilike.%${searchTerm}%`);
+
+    if (error) {
+      console.error('[CheckInService] 搜索失败:', error);
+      throw new Error('搜索失败');
+    }
+
+    if (!checkIns || checkIns.length === 0) {
+      return {
+        code: 200,
+        msg: '获取成功',
+        data: [],
+      };
+    }
+
+    // 获取床位信息
+    const bedIds = checkIns.map((c: any) => c.bed_id);
+    const { data: beds, error: bedsError } = await client
+      .from('beds')
+      .select('id, floor, bed_number, position, dormitory, room')
+      .in('id', bedIds);
+
+    if (bedsError) {
+      console.error('[CheckInService] 获取床位信息失败:', bedsError);
+    }
+
+    // 组装返回数据
+    const results = checkIns.map((checkIn: any) => {
+      const bed = beds?.find((b: any) => b.id === checkIn.bed_id);
+      const dormitoryName = bed?.dormitory === 'nansi' ? '南四巷180号宿舍' : '南二巷24号宿舍';
+
+      return {
+        checkInId: checkIn.id,
+        name: checkIn.name,
+        idCard: checkIn.id_card,
+        phone: checkIn.phone,
+        checkInTime: checkIn.check_in_time,
+        dormitory: bed?.dormitory || 'nansi',
+        dormitoryName,
+        floor: bed?.floor || 0,
+        room: bed?.room || '',
+        bedNumber: bed?.bed_number || 0,
+        position: bed?.position || 'upper',
+        positionLabel: bed?.position === 'upper' ? '上铺' : '下铺',
+        bedId: checkIn.bed_id,
+      };
+    });
+
+    console.log('[CheckInService] 搜索结果:', results.length, '条');
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: results,
+    };
+  }
 }

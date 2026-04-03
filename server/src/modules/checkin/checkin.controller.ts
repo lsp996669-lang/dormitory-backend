@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { CheckInService } from './checkin.service';
 
 @Controller('checkin')
@@ -33,5 +33,11 @@ export class CheckInController {
       body.checkInId,
       body.checkInDate
     );
+  }
+
+  @Get('search')
+  async searchResident(@Query('keyword') keyword: string) {
+    console.log('搜索人员请求:', keyword);
+    return await this.checkInService.searchResident(keyword);
   }
 }

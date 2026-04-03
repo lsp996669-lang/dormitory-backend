@@ -3,7 +3,14 @@ import { useState, useEffect } from 'react'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp } from 'lucide-react-taro'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -46,6 +53,26 @@ const FloorPage = () => {
   const [expandedNanTwo, setExpandedNanTwo] = useState(false) // 南二巷宿舍展开状态
   const [nanTwoFloorStats, setNanTwoFloorStats] = useState<NanTwoFloorStats[]>([]) // 南二巷楼层统计
   const [nanTwoStats, setNanTwoStats] = useState({ totalBeds: 0, occupiedBeds: 0, emptyBeds: 0, maintenanceBeds: 0 }) // 南二巷统计
+
+  // 搜索相关状态
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<{
+    checkInId: number
+    name: string
+    idCard: string
+    phone: string
+    checkInTime: string
+    dormitory: string
+    dormitoryName: string
+    floor: number
+    room: string
+    bedNumber: number
+    position: string
+    positionLabel: string
+    bedId: number
+  }>>([])
+  const [searching, setSearching] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
 
   // 检查服务器状态
   const checkServerStatus = async () => {
@@ -287,6 +314,46 @@ const FloorPage = () => {
     })
   }
 
+  // 搜索人员
+  const handleSearch = async () => {
+    if (!searchKeyword.trim()) {
+      Taro.showToast({ title: '请输入搜索内容', icon: 'none' })
+      return
+    }
+
+    setSearching(true)
+    try {
+      const res = await Network.request({
+        url: `/api/checkin/search?keyword=${encodeURIComponent(searchKeyword.trim())}`
+      })
+
+      console.log('[Floor] 搜索结果:', res.data)
+
+      if (res.data?.code === 200) {
+        setSearchResults(res.data.data || [])
+        setShowSearchResults(true)
+        if (res.data.data?.length === 0) {
+          Taro.showToast({ title: '未找到相关人员', icon: 'none' })
+        }
+      } else {
+        Taro.showToast({ title: res.data?.msg || '搜索失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('[Floor] 搜索失败:', error)
+      Taro.showToast({ title: '搜索失败', icon: 'none' })
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  // 点击搜索结果跳转到详情
+  const handleSearchResultClick = (result: typeof searchResults[0]) => {
+    setShowSearchResults(false)
+    Taro.navigateTo({
+      url: `/pages/detail/index?name=${encodeURIComponent(result.name)}&idCard=${encodeURIComponent(result.idCard)}&phone=${encodeURIComponent(result.phone)}&checkInTime=${encodeURIComponent(result.checkInTime)}&floor=${result.floor}&bedNumber=${result.bedNumber}&position=${result.position}&checkInId=${result.checkInId}&bedId=${result.bedId}&dormitory=${result.dormitory}&room=${result.room || ''}`
+    })
+  }
+
   const handleNotificationClick = () => {
     setShowNotifications(!showNotifications)
     if (!showNotifications) {
@@ -409,6 +476,35 @@ const FloorPage = () => {
                 登录
               </Button>
             </View>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 搜索功能 - 已登录时显示 */}
+      {isLoggedIn && (
+        <Card className="overflow-hidden mb-4 border-2 border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <View className="flex items-center gap-3">
+              <View className="flex-1">
+                <Input
+                  className="bg-white border-blue-200"
+                  placeholder="搜索姓名/手机号/身份证号"
+                  value={searchKeyword}
+                  onInput={(e) => setSearchKeyword(e.detail.value)}
+                  onConfirm={handleSearch}
+                />
+              </View>
+              <Button
+                className="bg-blue-600 text-white"
+                onClick={handleSearch}
+                disabled={searching}
+              >
+                {searching ? '搜索中...' : '搜索'}
+              </Button>
+            </View>
+            <Text className="text-xs text-blue-600 mt-2 block">
+              输入姓名（支持模糊搜索）、手机号或身份证号查找入住人员
+            </Text>
           </CardContent>
         </Card>
       )}
@@ -703,6 +799,62 @@ const FloorPage = () => {
           </Card>
         </View>
       )}
+
+      {/* 搜索结果弹窗 */}
+      <Dialog open={showSearchResults} onOpenChange={setShowSearchResults}>
+        <DialogContent className="max-w-md max-h-[70vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>搜索结果 ({searchResults.length}人)</DialogTitle>
+          </DialogHeader>
+          <View className="py-4">
+            {searchResults.length === 0 ? (
+              <View className="text-center py-8">
+                <Text className="text-gray-400">未找到相关人员</Text>
+              </View>
+            ) : (
+              <View className="space-y-3">
+                {searchResults.map((result) => (
+                  <View
+                    key={result.checkInId}
+                    className="bg-gray-50 rounded-lg p-3 border border-gray-200 cursor-pointer active:bg-gray-100"
+                    onClick={() => handleSearchResultClick(result)}
+                  >
+                    <View className="flex items-center justify-between mb-2">
+                      <Text className="text-base font-semibold text-blue-600">{result.name}</Text>
+                      <Text className="text-xs text-gray-500">{result.dormitoryName}</Text>
+                    </View>
+                    <View className="space-y-1">
+                      <View className="flex items-center gap-2">
+                        <Bed size={14} color="#6b7280" />
+                        <Text className="text-sm text-gray-700">
+                          {result.floor}楼 {result.room ? `${result.room} ` : ''}{result.bedNumber}号床 {result.positionLabel}
+                        </Text>
+                      </View>
+                      <View className="flex items-center gap-2">
+                        <Phone size={14} color="#6b7280" />
+                        <Text className="text-sm text-gray-600">{result.phone}</Text>
+                      </View>
+                      <View className="flex items-center gap-2">
+                        <CreditCard size={14} color="#6b7280" />
+                        <Text className="text-sm text-gray-600">{result.idCard}</Text>
+                      </View>
+                      <View className="flex items-center gap-2">
+                        <Calendar size={14} color="#6b7280" />
+                        <Text className="text-sm text-gray-500">
+                          入住: {new Date(result.checkInTime).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="mt-2 pt-2 border-t border-gray-200">
+                      <Text className="text-xs text-blue-500">点击查看详情</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </DialogContent>
+      </Dialog>
     </View>
   )
 }
