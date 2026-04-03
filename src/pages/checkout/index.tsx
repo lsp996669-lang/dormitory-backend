@@ -488,7 +488,7 @@ const CheckOutPage = () => {
                       <House size={20} color="#9333ea" />
                     </View>
                     <View>
-                      <CardTitle className="text-lg">南二巷宿舍</CardTitle>
+                      <CardTitle className="text-lg">南二巷24号宿舍</CardTitle>
                       <Text className="text-xs text-gray-500">
                         共 {nanTwoRecords.length} 条搬离记录
                       </Text>

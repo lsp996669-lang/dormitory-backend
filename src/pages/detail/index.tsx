@@ -36,14 +36,6 @@ const promptLogin = () => {
   })
 }
 
-interface BedInfo {
-  id: number
-  floor: number
-  bed_number: number  // 使用下划线命名，与后端返回一致
-  position: string
-  status: string
-}
-
 // 日期修改类型
 type DateEditType = 'checkin-checkin' | 'checkout-checkin' | 'checkout-checkout' | null
 
@@ -67,37 +59,44 @@ const DetailPage = () => {
   const [editCheckOutDate, setEditCheckOutDate] = useState('')
 
   // 转移床位相关状态
-  const [targetFloor, setTargetFloor] = useState('2')
-  const [availableBeds, setAvailableBeds] = useState<BedInfo[]>([])
+  const [transferData, setTransferData] = useState<{
+    dormitory: string
+    currentBed: { id: number; floor: number; bedNumber: number; position: string; room: string }
+    transferableBeds: Array<{ id: number; floor: number; bed_number: number; position: string; room: string }>
+  } | null>(null)
   const [targetBedId, setTargetBedId] = useState<number | null>(null)
   const [loadingBeds, setLoadingBeds] = useState(false)
-
-  // 楼层选项
-  const floorOptions = ['2', '3', '4']
-  const floorSelector = floorOptions.map(f => `${f}楼`)
+  const [selectedFloor, setSelectedFloor] = useState<string>('')
 
   useEffect(() => {
-    if (showTransferDialog && targetFloor) {
-      loadAvailableBeds(parseInt(targetFloor))
+    if (showTransferDialog && bedId) {
+      loadTransferableBeds()
     }
-  }, [showTransferDialog, targetFloor])
+  }, [showTransferDialog])
 
-  const loadAvailableBeds = async (floorNum: number) => {
+  const loadTransferableBeds = async () => {
     setLoadingBeds(true)
     try {
       const res = await Network.request({
-        url: `/api/beds/floor/${floorNum}`
+        url: `/api/beds/transferable/${bedId}`
       })
 
+      console.log('可转移床位响应:', res.data)
+
       if (res.data?.code === 200 && res.data?.data) {
-        // 只保留空闲床位
-        const emptyBeds = res.data.data.filter((bed: BedInfo) => bed.status === 'empty')
-        setAvailableBeds(emptyBeds)
+        setTransferData(res.data.data)
         setTargetBedId(null)
+        // 设置默认选中的楼层
+        const floors = [...new Set(res.data.data.transferableBeds.map((b: { floor: number }) => b.floor))]
+        if (floors.length > 0) {
+          setSelectedFloor(String(floors[0]))
+        }
+      } else {
+        Taro.showToast({ title: res.data?.msg || '加载可转移床位失败', icon: 'none' })
       }
     } catch (error) {
-      console.error('加载床位失败:', error)
-      Taro.showToast({ title: '加载床位失败', icon: 'none' })
+      console.error('加载可转移床位失败:', error)
+      Taro.showToast({ title: '加载可转移床位失败', icon: 'none' })
     } finally {
       setLoadingBeds(false)
     }
@@ -364,10 +363,29 @@ const DetailPage = () => {
 
   // 获取选中的目标床位显示文本
   const getTargetBedText = () => {
-    if (!targetBedId) return '请选择目标床位'
-    const bed = availableBeds.find(b => b.id === targetBedId)
+    if (!targetBedId || !transferData) return '请选择目标床位'
+    const bed = transferData.transferableBeds.find(b => b.id === targetBedId)
     if (!bed) return '请选择目标床位'
-    return `${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    const roomText = bed.room ? `${bed.room} - ` : ''
+    return `${roomText}${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+  }
+
+  // 获取筛选后的床位列表
+  const getFilteredBeds = () => {
+    if (!transferData || !selectedFloor) return []
+    return transferData.transferableBeds.filter(b => b.floor.toString() === selectedFloor)
+  }
+
+  // 获取可用的楼层列表
+  const getAvailableFloors = () => {
+    if (!transferData) return []
+    return [...new Set(transferData.transferableBeds.map(b => b.floor))].sort((a, b) => a - b)
+  }
+
+  // 获取宿舍名称
+  const getDormitoryName = () => {
+    if (!transferData) return ''
+    return transferData.dormitory === 'nansi' ? '南四巷180号宿舍' : '南二巷24号宿舍'
   }
 
   return (
@@ -510,99 +528,123 @@ const DetailPage = () => {
             <DialogTitle>转移床位</DialogTitle>
           </DialogHeader>
           <View className="py-4">
-            <View className="space-y-4">
-              {/* 当前床位 */}
-              <View className="bg-gray-50 rounded-lg p-3">
-                <Text className="text-xs text-gray-500 block mb-1">当前床位</Text>
-                <Text className="text-sm text-gray-800">
-                  {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
-                </Text>
+            {loadingBeds ? (
+              <View className="flex items-center justify-center py-8">
+                <Text className="text-sm text-gray-400">加载中...</Text>
               </View>
+            ) : transferData && transferData.transferableBeds.length > 0 ? (
+              <View className="space-y-4">
+                {/* 宿舍信息 */}
+                <View className="bg-blue-50 rounded-lg p-3">
+                  <Text className="text-xs text-gray-500 block mb-1">当前宿舍</Text>
+                  <Text className="text-sm text-blue-600 font-medium">{getDormitoryName()}</Text>
+                  <Text className="text-xs text-gray-500 block mt-1">（仅支持同宿舍内转移）</Text>
+                </View>
 
-              {/* 选择目标楼层 */}
-              <View>
-                <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
-                  <Bed size={14} color="#6b7280" />
-                  <Text>目标楼层</Text>
-                </Text>
-                <Picker
-                  mode="selector"
-                  range={floorSelector}
-                  value={floorOptions.indexOf(targetFloor)}
-                  onChange={(e) => setTargetFloor(floorOptions[e.detail.value])}
-                >
-                  <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm items-center">
-                    <Text className="text-foreground">{targetFloor}楼</Text>
-                  </View>
-                </Picker>
-              </View>
+                {/* 当前床位 */}
+                <View className="bg-gray-50 rounded-lg p-3">
+                  <Text className="text-xs text-gray-500 block mb-1">当前床位</Text>
+                  <Text className="text-sm text-gray-800">
+                    {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
+                  </Text>
+                </View>
 
-              {/* 选择目标床位 */}
-              <View>
-                <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
-                  <Bed size={14} color="#6b7280" />
-                  <Text>目标床位（仅显示空床位）</Text>
-                </Text>
-                {loadingBeds ? (
-                  <View className="h-10 flex items-center justify-center border border-gray-200 rounded-md">
-                    <Text className="text-sm text-gray-400">加载中...</Text>
-                  </View>
-                ) : availableBeds.length === 0 ? (
-                  <View className="h-10 flex items-center justify-center border border-gray-200 rounded-md bg-gray-50">
-                    <Text className="text-sm text-gray-400">该楼层暂无空床位</Text>
-                  </View>
-                ) : (
+                {/* 选择目标楼层 */}
+                <View>
+                  <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                    <Bed size={14} color="#6b7280" />
+                    <Text>目标楼层</Text>
+                  </Text>
                   <Picker
                     mode="selector"
-                    range={availableBeds.map(b => `${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`)}
-                    value={targetBedId ? availableBeds.findIndex(b => b.id === targetBedId) : 0}
+                    range={getAvailableFloors().map(f => `${f}楼`)}
+                    value={getAvailableFloors().findIndex(f => f.toString() === selectedFloor)}
                     onChange={(e) => {
-                      const selectedBed = availableBeds[e.detail.value]
-                      if (selectedBed) {
-                        setTargetBedId(selectedBed.id)
+                      const floors = getAvailableFloors()
+                      if (floors[e.detail.value]) {
+                        setSelectedFloor(floors[e.detail.value].toString())
+                        setTargetBedId(null)
                       }
                     }}
                   >
                     <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm items-center">
-                      <Text className={targetBedId ? 'text-foreground' : 'text-muted-foreground'}>
-                        {getTargetBedText()}
-                      </Text>
+                      <Text className="text-foreground">{selectedFloor}楼</Text>
                     </View>
                   </Picker>
+                </View>
+
+                {/* 选择目标床位 */}
+                <View>
+                  <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                    <Bed size={14} color="#6b7280" />
+                    <Text>目标床位（仅显示空床位）</Text>
+                  </Text>
+                  {getFilteredBeds().length === 0 ? (
+                    <View className="h-10 flex items-center justify-center border border-gray-200 rounded-md bg-gray-50">
+                      <Text className="text-sm text-gray-400">该楼层暂无空床位</Text>
+                    </View>
+                  ) : (
+                    <Picker
+                      mode="selector"
+                      range={getFilteredBeds().map(b => {
+                        const roomText = b.room ? `${b.room} - ` : ''
+                        return `${roomText}${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
+                      })}
+                      value={targetBedId ? getFilteredBeds().findIndex(b => b.id === targetBedId) : 0}
+                      onChange={(e) => {
+                        const beds = getFilteredBeds()
+                        const selectedBed = beds[e.detail.value]
+                        if (selectedBed) {
+                          setTargetBedId(selectedBed.id)
+                        }
+                      }}
+                    >
+                      <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm items-center">
+                        <Text className={targetBedId ? 'text-foreground' : 'text-muted-foreground'}>
+                          {getTargetBedText()}
+                        </Text>
+                      </View>
+                    </Picker>
+                  )}
+                </View>
+
+                {/* 转移提示 */}
+                {targetBedId && (
+                  <View className="bg-green-50 rounded-lg p-3">
+                    <View className="flex items-center gap-2 mb-2">
+                      <View className="flex items-center gap-1">
+                        <Text className="text-xs text-gray-500">从</Text>
+                        <Text className="text-sm text-gray-600 font-medium">
+                          {decodedFloor}楼{decodedBedNumber}号床{getPositionLabel(position)}
+                        </Text>
+                      </View>
+                      <ArrowRight size={14} color="#22c55e" />
+                      <View className="flex items-center gap-1">
+                        <Text className="text-xs text-gray-500">到</Text>
+                        <Text className="text-sm text-green-600 font-medium">
+                          {selectedFloor}楼 {getTargetBedText()}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-xs text-gray-500 block">
+                      转移后人员信息保持不变，仅更换床位
+                    </Text>
+                  </View>
                 )}
               </View>
-
-              {/* 转移提示 */}
-              {targetBedId && (
-                <View className="bg-blue-50 rounded-lg p-3">
-                  <View className="flex items-center gap-2 mb-2">
-                    <View className="flex items-center gap-1">
-                      <Text className="text-xs text-gray-500">从</Text>
-                      <Text className="text-sm text-blue-600 font-medium">
-                        {decodedFloor}楼{decodedBedNumber}号床{getPositionLabel(position)}
-                      </Text>
-                    </View>
-                    <ArrowRight size={14} color="#2563eb" />
-                    <View className="flex items-center gap-1">
-                      <Text className="text-xs text-gray-500">到</Text>
-                      <Text className="text-sm text-green-600 font-medium">
-                        {targetFloor}楼{getTargetBedText()}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text className="text-xs text-gray-500 block">
-                    转移后人员信息保持不变，仅更换床位
-                  </Text>
-                </View>
-              )}
-            </View>
+            ) : (
+              <View className="flex flex-col items-center justify-center py-8">
+                <Text className="text-sm text-gray-400 block mb-2">当前宿舍暂无空床位</Text>
+                <Text className="text-xs text-gray-400">无法进行床位转移</Text>
+              </View>
+            )}
           </View>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTransferDialog(false)}>取消</Button>
             <Button 
               className="bg-blue-500 text-white" 
               onClick={handleTransfer}
-              disabled={submitting || !targetBedId || availableBeds.length === 0}
+              disabled={submitting || !targetBedId || !transferData || transferData.transferableBeds.length === 0}
             >
               {submitting ? '处理中...' : '确认转移'}
             </Button>

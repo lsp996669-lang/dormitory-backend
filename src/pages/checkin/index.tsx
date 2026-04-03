@@ -180,7 +180,39 @@ const CheckInPage = () => {
   }
 
   const handleBedClick = (bed: BedInfo) => {
-    if (bed.status === 'empty') {
+    if (bed.status === 'maintenance') {
+      // 维修中的床位，询问是否取消维修中状态
+      Taro.showModal({
+        title: '床位维修中',
+        content: '该床位正在维修中，暂时无法入住。是否要取消维修状态？',
+        confirmText: '取消维修',
+        cancelText: '关闭',
+        success: async (res) => {
+          if (res.confirm) {
+            // 检查登录状态
+            if (!checkLogin()) {
+              promptLogin()
+              return
+            }
+            try {
+              const result = await Network.request({
+                url: `/api/beds/maintenance/${bed.id}/cancel`,
+                method: 'POST'
+              })
+              if (result.data?.code === 200) {
+                Taro.showToast({ title: '已取消维修', icon: 'success' })
+                loadBeds()
+              } else {
+                Taro.showToast({ title: result.data?.msg || '操作失败', icon: 'none' })
+              }
+            } catch (error) {
+              console.error('取消维修失败:', error)
+              Taro.showToast({ title: '操作失败', icon: 'none' })
+            }
+          }
+        }
+      })
+    } else if (bed.status === 'empty') {
       // 检查登录状态
       if (!checkLogin()) {
         promptLogin()
@@ -201,7 +233,7 @@ const CheckInPage = () => {
       // 已入住的床位，点击名字查看详情（不需要登录）
       if (bed.checkIn) {
         Taro.navigateTo({
-          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}`
+          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}&dormitory=${bed.dormitory || 'nansi'}&room=${bed.room || ''}`
         })
       }
     }
@@ -260,6 +292,41 @@ const CheckInPage = () => {
     }
   }
 
+  const handleSetMaintenance = async () => {
+    if (!selectedBed) return
+
+    Taro.showModal({
+      title: '设置维修中',
+      content: `确定将 ${selectedBed.bedNumber}号床 ${getPositionLabel(selectedBed.position)} 设置为维修中吗？维修中的床位将无法入住。`,
+      confirmText: '确定',
+      cancelText: '取消',
+      success: async (res) => {
+        if (res.confirm) {
+          setSubmitting(true)
+          try {
+            const result = await Network.request({
+              url: `/api/beds/maintenance/${selectedBed.id}`,
+              method: 'POST'
+            })
+
+            if (result.data?.code === 200) {
+              Taro.showToast({ title: '已设为维修中', icon: 'success' })
+              setShowForm(false)
+              loadBeds()
+            } else {
+              Taro.showToast({ title: result.data?.msg || '设置失败', icon: 'none' })
+            }
+          } catch (error) {
+            console.error('设置维修中失败:', error)
+            Taro.showToast({ title: '设置失败', icon: 'none' })
+          } finally {
+            setSubmitting(false)
+          }
+        }
+      }
+    })
+  }
+
   const getPositionLabel = (position: string) => {
     return position === 'upper' ? '上铺' : '下铺'
   }
@@ -278,7 +345,7 @@ const CheckInPage = () => {
     <View className="min-h-screen bg-gray-50">
       <View className="bg-white px-4 py-3 border-b border-gray-200">
         <Text className="text-lg font-semibold text-gray-800">
-          {isNanTwo ? `南二巷宿舍 - ${floor}楼${room ? ` - ${room}` : ''}` : `南四巷180号宿舍 - ${floor}楼`} - 入住登记
+          {isNanTwo ? `南二巷24号宿舍 - ${floor}楼${room ? ` - ${room}` : ''}` : `南四巷180号宿舍 - ${floor}楼`} - 入住登记
         </Text>
         <Text className="text-xs text-gray-500 block mt-1">
           点击空床位进行入住登记，点击已入住床位查看详情
@@ -324,15 +391,17 @@ const CheckInPage = () => {
                               className={`rounded p-2 cursor-pointer ${
                                 upperBed?.status === 'occupied'
                                   ? 'bg-green-50 border border-green-200'
+                                  : upperBed?.status === 'maintenance'
+                                  ? 'bg-orange-50 border border-orange-200'
                                   : 'bg-white border border-gray-200'
                               }`}
                               onClick={() => upperBed && handleBedClick(upperBed)}
                             >
                               <View className="flex items-center justify-between">
                                 <View className="flex items-center gap-1">
-                                  <Bed size={14} color={upperBed?.status === 'occupied' ? '#22c55e' : '#9ca3af'} />
+                                  <Bed size={14} color={upperBed?.status === 'occupied' ? '#22c55e' : upperBed?.status === 'maintenance' ? '#f97316' : '#9ca3af'} />
                                   <Text className={`text-xs font-medium ${
-                                    upperBed?.status === 'occupied' ? 'text-green-700' : 'text-gray-500'
+                                    upperBed?.status === 'occupied' ? 'text-green-700' : upperBed?.status === 'maintenance' ? 'text-orange-700' : 'text-gray-500'
                                   }`}
                                   >
                                     上铺
@@ -341,9 +410,15 @@ const CheckInPage = () => {
                                 {upperBed?.status === 'occupied' && (
                                   <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
                                 )}
+                                {upperBed?.status === 'maintenance' && (
+                                  <Badge className="bg-orange-500 text-white text-xs">维修中</Badge>
+                                )}
                               </View>
                               {upperBed?.status === 'empty' && (
                                 <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                              )}
+                              {upperBed?.status === 'maintenance' && (
+                                <Text className="text-xs text-orange-500 block mt-1">维修中，暂停入住</Text>
                               )}
                               {upperBed?.status === 'occupied' && upperBed.checkIn && (
                                 <View className="mt-1">
@@ -360,15 +435,17 @@ const CheckInPage = () => {
                               className={`rounded p-2 cursor-pointer ${
                                 lowerBed?.status === 'occupied'
                                   ? 'bg-green-50 border border-green-200'
+                                  : lowerBed?.status === 'maintenance'
+                                  ? 'bg-orange-50 border border-orange-200'
                                   : 'bg-white border border-gray-200'
                               }`}
                               onClick={() => lowerBed && handleBedClick(lowerBed)}
                             >
                               <View className="flex items-center justify-between">
                                 <View className="flex items-center gap-1">
-                                  <Bed size={14} color={lowerBed?.status === 'occupied' ? '#22c55e' : '#9ca3af'} />
+                                  <Bed size={14} color={lowerBed?.status === 'occupied' ? '#22c55e' : lowerBed?.status === 'maintenance' ? '#f97316' : '#9ca3af'} />
                                   <Text className={`text-xs font-medium ${
-                                    lowerBed?.status === 'occupied' ? 'text-green-700' : 'text-gray-500'
+                                    lowerBed?.status === 'occupied' ? 'text-green-700' : lowerBed?.status === 'maintenance' ? 'text-orange-700' : 'text-gray-500'
                                   }`}
                                   >
                                     下铺
@@ -377,9 +454,15 @@ const CheckInPage = () => {
                                 {lowerBed?.status === 'occupied' && (
                                   <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
                                 )}
+                                {lowerBed?.status === 'maintenance' && (
+                                  <Badge className="bg-orange-500 text-white text-xs">维修中</Badge>
+                                )}
                               </View>
                               {lowerBed?.status === 'empty' && (
                                 <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                              )}
+                              {lowerBed?.status === 'maintenance' && (
+                                <Text className="text-xs text-orange-500 block mt-1">维修中，暂停入住</Text>
                               )}
                               {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                                 <View className="mt-1">
@@ -420,15 +503,17 @@ const CheckInPage = () => {
                       className={`rounded p-2 cursor-pointer ${
                         upperBed?.status === 'occupied'
                           ? 'bg-green-50 border border-green-200'
+                          : upperBed?.status === 'maintenance'
+                          ? 'bg-orange-50 border border-orange-200'
                           : 'bg-gray-50 border border-gray-200'
                       }`}
                       onClick={() => upperBed && handleBedClick(upperBed)}
                     >
                       <View className="flex items-center justify-between">
                         <View className="flex items-center gap-1">
-                          <Bed size={14} color={upperBed?.status === 'occupied' ? '#22c55e' : '#9ca3af'} />
+                          <Bed size={14} color={upperBed?.status === 'occupied' ? '#22c55e' : upperBed?.status === 'maintenance' ? '#f97316' : '#9ca3af'} />
                           <Text className={`text-xs font-medium ${
-                            upperBed?.status === 'occupied' ? 'text-green-700' : 'text-gray-500'
+                            upperBed?.status === 'occupied' ? 'text-green-700' : upperBed?.status === 'maintenance' ? 'text-orange-700' : 'text-gray-500'
                           }`}
                           >
                             上铺
@@ -437,9 +522,15 @@ const CheckInPage = () => {
                         {upperBed?.status === 'occupied' && (
                           <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
                         )}
+                        {upperBed?.status === 'maintenance' && (
+                          <Badge className="bg-orange-500 text-white text-xs">维修中</Badge>
+                        )}
                       </View>
                       {upperBed?.status === 'empty' && (
                         <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                      )}
+                      {upperBed?.status === 'maintenance' && (
+                        <Text className="text-xs text-orange-500 block mt-1">维修中，暂停入住</Text>
                       )}
                       {upperBed?.status === 'occupied' && upperBed.checkIn && (
                         <View className="mt-1">
@@ -456,15 +547,17 @@ const CheckInPage = () => {
                       className={`rounded p-2 cursor-pointer ${
                         lowerBed?.status === 'occupied'
                           ? 'bg-green-50 border border-green-200'
+                          : lowerBed?.status === 'maintenance'
+                          ? 'bg-orange-50 border border-orange-200'
                           : 'bg-gray-50 border border-gray-200'
                       }`}
                       onClick={() => lowerBed && handleBedClick(lowerBed)}
                     >
                       <View className="flex items-center justify-between">
                         <View className="flex items-center gap-1">
-                          <Bed size={14} color={lowerBed?.status === 'occupied' ? '#22c55e' : '#9ca3af'} />
+                          <Bed size={14} color={lowerBed?.status === 'occupied' ? '#22c55e' : lowerBed?.status === 'maintenance' ? '#f97316' : '#9ca3af'} />
                           <Text className={`text-xs font-medium ${
-                            lowerBed?.status === 'occupied' ? 'text-green-700' : 'text-gray-500'
+                            lowerBed?.status === 'occupied' ? 'text-green-700' : lowerBed?.status === 'maintenance' ? 'text-orange-700' : 'text-gray-500'
                           }`}
                           >
                             下铺
@@ -473,9 +566,15 @@ const CheckInPage = () => {
                         {lowerBed?.status === 'occupied' && (
                           <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
                         )}
+                        {lowerBed?.status === 'maintenance' && (
+                          <Badge className="bg-orange-500 text-white text-xs">维修中</Badge>
+                        )}
                       </View>
                       {lowerBed?.status === 'empty' && (
                         <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                      )}
+                      {lowerBed?.status === 'maintenance' && (
+                        <Text className="text-xs text-orange-500 block mt-1">维修中，暂停入住</Text>
                       )}
                       {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                         <View className="mt-1">
@@ -498,7 +597,7 @@ const CheckInPage = () => {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>入住登记</DialogTitle>
+            <DialogTitle>床位操作</DialogTitle>
             <DialogDescription>
               {selectedBed?.bedNumber}号床 - {selectedBed && getPositionLabel(selectedBed.position)}
             </DialogDescription>
@@ -561,14 +660,28 @@ const CheckInPage = () => {
               </Picker>
             </View>
           </View>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForm(false)}>取消</Button>
+          <DialogFooter className="flex-col gap-2">
+            <View className="flex flex-row gap-2 w-full">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setShowForm(false)}
+              >取消</Button>
+              <Button 
+                className="flex-1 bg-blue-600 text-white" 
+                onClick={handleFormSubmit}
+                disabled={submitting}
+              >
+                {submitting ? '提交中...' : '确认入住'}
+              </Button>
+            </View>
             <Button 
-              className="bg-blue-600 text-white" 
-              onClick={handleFormSubmit}
+              variant="outline"
+              className="w-full border-orange-300 text-orange-600 hover:bg-orange-50"
+              onClick={handleSetMaintenance}
               disabled={submitting}
             >
-              {submitting ? '提交中...' : '确认入住'}
+              设为维修中
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -75,7 +75,7 @@ const ExportPage = () => {
     const now = new Date()
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
     const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
-    const dormitoryName = dormitory === 'nansi' ? '南四巷180号' : '南二巷'
+    const dormitoryName = dormitory === 'nansi' ? '南四巷180号' : '南二巷24号'
     return `${dormitoryName}宿舍数据_${dateStr}_${timeStr}.xlsx`
   }
 
@@ -250,7 +250,7 @@ const ExportPage = () => {
                 <Building size={24} color="#fff" />
               </View>
               <View>
-                <Text className="text-base font-semibold text-gray-800">南二巷宿舍</Text>
+                <Text className="text-base font-semibold text-gray-800">南二巷24号宿舍</Text>
                 <Text className="text-xs text-gray-500">全部数据保存</Text>
               </View>
             </View>

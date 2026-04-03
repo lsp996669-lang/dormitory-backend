@@ -187,6 +187,7 @@ export class BedsService implements OnModuleInit {
       totalBeds: number;
       occupiedBeds: number;
       emptyBeds: number;
+      maintenanceBeds: number;
     }> = [];
     for (let floor = 1; floor <= 4; floor++) {
       const { data: beds, error } = await client
@@ -202,13 +203,15 @@ export class BedsService implements OnModuleInit {
           totalBeds: 30,
           occupiedBeds: 0,
           emptyBeds: 30,
+          maintenanceBeds: 0,
         });
         continue;
       }
 
       const totalBeds = beds?.length || 30;
       const occupiedBeds = beds?.filter(b => b.status === 'occupied').length || 0;
-      const emptyBeds = totalBeds - occupiedBeds;
+      const maintenanceBeds = beds?.filter(b => b.status === 'maintenance').length || 0;
+      const emptyBeds = totalBeds - occupiedBeds - maintenanceBeds;
 
       // 四楼的空床不计入统计，但保留入住功能
       const displayEmptyBeds = floor === 4 ? 0 : emptyBeds;
@@ -218,6 +221,7 @@ export class BedsService implements OnModuleInit {
         totalBeds,
         occupiedBeds,
         emptyBeds: displayEmptyBeds,
+        maintenanceBeds,
       });
     }
 
@@ -529,6 +533,7 @@ export class BedsService implements OnModuleInit {
     }
 
     const occupiedBeds = beds?.filter(b => b.status === 'occupied').length || 0;
+    const maintenanceBeds = beds?.filter(b => b.status === 'maintenance').length || 0;
 
     return {
       code: 200,
@@ -536,7 +541,8 @@ export class BedsService implements OnModuleInit {
       data: {
         totalBeds,
         occupiedBeds,
-        emptyBeds: totalBeds - occupiedBeds,
+        emptyBeds: totalBeds - occupiedBeds - maintenanceBeds,
+        maintenanceBeds,
         floors: Object.keys(NAN_TWO_ROOM_CONFIG).map(Number).sort((a, b) => a - b),
       },
     };
@@ -561,6 +567,7 @@ export class BedsService implements OnModuleInit {
       totalBeds: number;
       occupiedBeds: number;
       emptyBeds: number;
+      maintenanceBeds: number;
       rooms: string[];
     }> = [];
 
@@ -569,12 +576,14 @@ export class BedsService implements OnModuleInit {
       const totalBeds = rooms.reduce((sum, r) => sum + r.bedCount * 2, 0);
       const floorBeds = beds?.filter(b => b.floor === floor) || [];
       const occupiedBeds = floorBeds.filter(b => b.status === 'occupied').length;
+      const maintenanceBeds = floorBeds.filter(b => b.status === 'maintenance').length;
 
       stats.push({
         floor,
         totalBeds,
         occupiedBeds,
-        emptyBeds: totalBeds - occupiedBeds,
+        emptyBeds: totalBeds - occupiedBeds - maintenanceBeds,
+        maintenanceBeds,
         rooms: rooms.map(r => r.room),
       });
     }
@@ -583,6 +592,150 @@ export class BedsService implements OnModuleInit {
       code: 200,
       msg: '获取成功',
       data: stats,
+    };
+  }
+
+  /**
+   * 设置床位为维修中状态
+   */
+  async setMaintenance(bedId: number) {
+    const client = getSupabaseClient();
+
+    // 检查床位是否存在
+    const { data: bed, error: bedError } = await client
+      .from('beds')
+      .select('*')
+      .eq('id', bedId)
+      .single();
+
+    if (bedError || !bed) {
+      throw new Error('床位不存在');
+    }
+
+    if (bed.status === 'occupied') {
+      throw new Error('已入住的床位无法设置为维修中');
+    }
+
+    if (bed.status === 'maintenance') {
+      return {
+        code: 200,
+        msg: '该床位已是维修中状态',
+        data: null,
+      };
+    }
+
+    // 设置为维修中
+    const { error: updateError } = await client
+      .from('beds')
+      .update({ status: 'maintenance', updated_at: new Date().toISOString() })
+      .eq('id', bedId);
+
+    if (updateError) {
+      console.error('[BedsService] 设置维修中失败:', updateError);
+      throw new Error('设置维修中失败');
+    }
+
+    console.log('[BedsService] 设置维修中成功:', bedId);
+
+    return {
+      code: 200,
+      msg: '已设置为维修中',
+      data: { bedId, status: 'maintenance' },
+    };
+  }
+
+  /**
+   * 取消床位维修中状态
+   */
+  async cancelMaintenance(bedId: number) {
+    const client = getSupabaseClient();
+
+    // 检查床位是否存在
+    const { data: bed, error: bedError } = await client
+      .from('beds')
+      .select('*')
+      .eq('id', bedId)
+      .single();
+
+    if (bedError || !bed) {
+      throw new Error('床位不存在');
+    }
+
+    if (bed.status !== 'maintenance') {
+      return {
+        code: 200,
+        msg: '该床位不是维修中状态',
+        data: null,
+      };
+    }
+
+    // 取消维修中，设置为空闲
+    const { error: updateError } = await client
+      .from('beds')
+      .update({ status: 'empty', updated_at: new Date().toISOString() })
+      .eq('id', bedId);
+
+    if (updateError) {
+      console.error('[BedsService] 取消维修中失败:', updateError);
+      throw new Error('取消维修中失败');
+    }
+
+    console.log('[BedsService] 取消维修中成功:', bedId);
+
+    return {
+      code: 200,
+      msg: '已取消维修中',
+      data: { bedId, status: 'empty' },
+    };
+  }
+
+  /**
+   * 获取指定宿舍的可转移床位列表（同宿舍的空闲床位）
+   */
+  async getTransferableBeds(bedId: number) {
+    const client = getSupabaseClient();
+
+    // 获取原床位信息
+    const { data: bed, error: bedError } = await client
+      .from('beds')
+      .select('*')
+      .eq('id', bedId)
+      .single();
+
+    if (bedError || !bed) {
+      throw new Error('床位不存在');
+    }
+
+    // 获取同宿舍的空闲床位
+    const { data: emptyBeds, error } = await client
+      .from('beds')
+      .select('id, floor, bed_number, position, room, dormitory')
+      .eq('dormitory', bed.dormitory)
+      .eq('status', 'empty')
+      .neq('id', bedId)
+      .order('floor', { ascending: true })
+      .order('bed_number', { ascending: true })
+      .order('position', { ascending: true });
+
+    if (error) {
+      console.error('[BedsService] 获取可转移床位失败:', error);
+      throw new Error('获取可转移床位失败');
+    }
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: {
+        dormitory: bed.dormitory,
+        currentBed: {
+          id: bed.id,
+          floor: bed.floor,
+          bedNumber: bed.bed_number,
+          position: bed.position,
+          room: bed.room,
+        },
+        transferableBeds: emptyBeds || [],
+      },
     };
   }
 }

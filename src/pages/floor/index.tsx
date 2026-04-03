@@ -12,6 +12,7 @@ interface FloorStats {
   totalBeds: number
   occupiedBeds: number
   emptyBeds: number
+  maintenanceBeds: number
 }
 
 interface Notification {
@@ -30,6 +31,7 @@ interface NanTwoFloorStats {
   totalBeds: number
   occupiedBeds: number
   emptyBeds: number
+  maintenanceBeds: number
   rooms: string[]
 }
 
@@ -43,7 +45,7 @@ const FloorPage = () => {
   const [expandedDormitory, setExpandedDormitory] = useState(true) // 南四巷180号宿舍展开状态
   const [expandedNanTwo, setExpandedNanTwo] = useState(false) // 南二巷宿舍展开状态
   const [nanTwoFloorStats, setNanTwoFloorStats] = useState<NanTwoFloorStats[]>([]) // 南二巷楼层统计
-  const [nanTwoStats, setNanTwoStats] = useState({ totalBeds: 0, occupiedBeds: 0, emptyBeds: 0 }) // 南二巷统计
+  const [nanTwoStats, setNanTwoStats] = useState({ totalBeds: 0, occupiedBeds: 0, emptyBeds: 0, maintenanceBeds: 0 }) // 南二巷统计
 
   // 检查服务器状态
   const checkServerStatus = async () => {
@@ -103,10 +105,12 @@ const FloorPage = () => {
         // 计算总计
         const total = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
         const occupied = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
+        const maintenance = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
         setNanTwoStats({
           totalBeds: total,
           occupiedBeds: occupied,
-          emptyBeds: total - occupied
+          emptyBeds: total - occupied - maintenance,
+          maintenanceBeds: maintenance
         })
       }
     } catch (error) {
@@ -588,7 +592,7 @@ const FloorPage = () => {
                         <View>
                           <Text className="text-base font-medium text-gray-800">{floor.floor}楼</Text>
                           <Text className="text-xs text-gray-500">
-                            总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}
+                            总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}{floor.maintenanceBeds > 0 ? ` | 维修: ${floor.maintenanceBeds}` : ''}
                           </Text>
                         </View>
                       </View>
@@ -633,11 +637,11 @@ const FloorPage = () => {
                     <House size={20} color="#9333ea" />
                   </View>
                   <View>
-                    <CardTitle className="text-lg">南二巷宿舍</CardTitle>
+                    <CardTitle className="text-lg">南二巷24号宿舍</CardTitle>
                     <Text className="text-xs text-gray-500">
                       总床位: {nanTwoStats.totalBeds} | 
                       已入住: {nanTwoStats.occupiedBeds} | 
-                      空床: {nanTwoStats.emptyBeds}
+                      空床: {nanTwoStats.emptyBeds}{nanTwoStats.maintenanceBeds > 0 ? ` | 维修: ${nanTwoStats.maintenanceBeds}` : ''}
                     </Text>
                   </View>
                 </View>
@@ -665,7 +669,7 @@ const FloorPage = () => {
                         <View>
                           <Text className="text-base font-medium text-gray-800">{floor.floor}楼</Text>
                           <Text className="text-xs text-gray-500">
-                            总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}
+                            总床位: {floor.totalBeds} | 已入住: {floor.occupiedBeds} | 空床: {floor.emptyBeds}{floor.maintenanceBeds > 0 ? ` | 维修: ${floor.maintenanceBeds}` : ''}
                           </Text>
                         </View>
                       </View>

@@ -68,3 +68,26 @@ export class FloorsController {
     return await this.bedsService.getNanTwoFloorStats();
   }
 }
+
+@Controller('beds')
+export class BedsMaintenanceController {
+  constructor(private readonly bedsService: BedsService) {}
+
+  @Post('maintenance/:bedId')
+  async setMaintenance(@Param('bedId') bedId: string) {
+    console.log('设置维修中请求:', bedId);
+    return await this.bedsService.setMaintenance(parseInt(bedId, 10));
+  }
+
+  @Post('maintenance/:bedId/cancel')
+  async cancelMaintenance(@Param('bedId') bedId: string) {
+    console.log('取消维修中请求:', bedId);
+    return await this.bedsService.cancelMaintenance(parseInt(bedId, 10));
+  }
+
+  @Get('transferable/:bedId')
+  async getTransferableBeds(@Param('bedId') bedId: string) {
+    console.log('获取可转移床位请求:', bedId);
+    return await this.bedsService.getTransferableBeds(parseInt(bedId, 10));
+  }
+}

@@ -74,7 +74,7 @@ export class ExportController {
     console.log('导出南二巷宿舍数据请求');
     
     const buffer = await this.exportService.exportDormitoryData('nantwo');
-    const filename = `南二巷宿舍数据_${this.getDateStr()}.xlsx`;
+    const filename = `南二巷24号宿舍数据_${this.getDateStr()}.xlsx`;
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);

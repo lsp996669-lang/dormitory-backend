@@ -349,7 +349,7 @@ export class ExportService {
     workbook.creator = '宿舍管理系统';
     workbook.created = new Date();
 
-    const dormitoryName = dormitory === 'nansi' ? '南四巷180号' : '南二巷';
+    const dormitoryName = dormitory === 'nansi' ? '南四巷180号' : '南二巷24号';
 
     // Sheet 1: 当前入住人员
     const sheet1 = workbook.addWorksheet('当前入住人员', {

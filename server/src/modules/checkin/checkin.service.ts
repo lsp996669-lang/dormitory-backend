@@ -24,6 +24,10 @@ export class CheckInService {
       throw new Error('该床位已被占用');
     }
 
+    if (bed.status === 'maintenance') {
+      throw new Error('该床位正在维修中，无法入住');
+    }
+
     // 处理入住日期
     const checkInTime = checkInDate ? new Date(checkInDate).toISOString() : new Date().toISOString();
 
@@ -119,7 +123,18 @@ export class CheckInService {
       };
     }
 
-    // 2. 检查目标床位是否存在且为空
+    // 2. 获取原床位信息（用于验证宿舍）
+    const { data: oldBed, error: oldBedError } = await client
+      .from('beds')
+      .select('*')
+      .eq('id', oldBedId)
+      .single();
+
+    if (oldBedError || !oldBed) {
+      throw new Error('原床位不存在');
+    }
+
+    // 3. 检查目标床位是否存在且为空
     const { data: targetBed, error: targetBedError } = await client
       .from('beds')
       .select('*')
@@ -130,11 +145,20 @@ export class CheckInService {
       throw new Error('目标床位不存在');
     }
 
+    // 4. 验证是否为同一宿舍（禁止跨宿舍转移）
+    if (oldBed.dormitory !== targetBed.dormitory) {
+      throw new Error('禁止跨宿舍转移床位，只能转移到同一宿舍的床位');
+    }
+
     if (targetBed.status === 'occupied') {
       throw new Error('目标床位已被占用');
     }
 
-    // 3. 更新入住记录的床位ID
+    if (targetBed.status === 'maintenance') {
+      throw new Error('目标床位正在维修中，无法入住');
+    }
+
+    // 5. 更新入住记录的床位ID
     const { error: updateCheckInError } = await client
       .from('check_ins')
       .update({ bed_id: targetBedId, updated_at: new Date().toISOString() })
@@ -145,7 +169,7 @@ export class CheckInService {
       throw new Error('转移床位失败');
     }
 
-    // 4. 更新原床位状态为空闲
+    // 6. 更新原床位状态为空闲
     const { error: updateOldBedError } = await client
       .from('beds')
       .update({ status: 'empty', updated_at: new Date().toISOString() })
@@ -158,7 +182,7 @@ export class CheckInService {
       throw new Error('转移床位失败');
     }
 
-    // 5. 更新目标床位状态为占用
+    // 7. 更新目标床位状态为占用
     const { error: updateNewBedError } = await client
       .from('beds')
       .update({ status: 'occupied', updated_at: new Date().toISOString() })
