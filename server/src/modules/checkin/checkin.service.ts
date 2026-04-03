@@ -274,6 +274,7 @@ export class CheckInService {
 
     // 搜索入住记录（支持姓名、手机号、身份证号）
     // 对于姓名，使用 ilike 进行模糊匹配（按顺序包含关键词）
+    // check_ins 表中的记录都是当前入住人员（未搬离），无需过滤 check_out_time
     const { data: checkIns, error } = await client
       .from('check_ins')
       .select(`
@@ -284,7 +285,6 @@ export class CheckInService {
         check_in_time,
         bed_id
       `)
-      .is('check_out_time', null) // 只搜索未搬离的
       .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,id_card.ilike.%${searchTerm}%`);
 
     if (error) {
