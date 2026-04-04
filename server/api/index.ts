@@ -1,36 +1,37 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import * as express from 'express';
+import { ExpressAdapter } from '@nestjs/platform-express';
 import { HttpStatusInterceptor } from '../src/interceptors/http-status.interceptor';
-import type { Request, Response } from 'express';
 
 let cachedApp: any;
+let expressInstance: express.Application;
 
-async function createApp() {
-  if (cachedApp) {
-    return cachedApp;
-  }
+async function bootstrap() {
+  if (cachedApp) return cachedApp;
 
-  const app = await NestFactory.create(AppModule, {
+  const expressApp = express();
+  const adapter = new ExpressAdapter(expressApp);
+  
+  cachedApp = await NestFactory.create(AppModule, adapter, {
     logger: false,
   });
 
-  app.enableCors({
+  cachedApp.enableCors({
     origin: true,
     credentials: true,
   });
-  app.setGlobalPrefix('api');
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ limit: '50mb', extended: true }));
-  app.useGlobalInterceptors(new HttpStatusInterceptor());
+  cachedApp.setGlobalPrefix('api');
+  cachedApp.use(express.json({ limit: '50mb' }));
+  cachedApp.use(express.urlencoded({ limit: '50mb', extended: true }));
+  cachedApp.useGlobalInterceptors(new HttpStatusInterceptor());
 
-  await app.init();
-  cachedApp = app;
-  return app;
+  await cachedApp.init();
+  expressInstance = expressApp;
+  return cachedApp;
 }
 
-export default async function handler(req: Request, res: Response) {
-  const app = await createApp();
-  const expressInstance = app.getHttpAdapter().getInstance();
+export default async (req: any, res: any) => {
+  await bootstrap();
   return expressInstance(req, res);
-}
+};
