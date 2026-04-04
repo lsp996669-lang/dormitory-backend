@@ -207,7 +207,7 @@ const CheckInPage = () => {
               }
             } catch (error) {
               console.error('取消维修失败:', error)
-              Taro.showToast({ title: '操作失败', icon: 'none' })
+              Taro.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
             }
           }
         }
@@ -218,17 +218,52 @@ const CheckInPage = () => {
         promptLogin()
         return
       }
-      setSelectedBed(bed)
-      // 设置默认入住日期为今天
-      const today = new Date()
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      setFormData({
-        name: '',
-        idCard: '',
-        phone: '',
-        checkInDate: dateStr
+      // 空床位：显示操作选项（入住 或 设为维修）
+      Taro.showActionSheet({
+        itemList: ['入住登记', '设为维修中'],
+        success: (res) => {
+          if (res.tapIndex === 0) {
+            // 入住登记
+            setSelectedBed(bed)
+            const today = new Date()
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+            setFormData({
+              name: '',
+              idCard: '',
+              phone: '',
+              checkInDate: dateStr
+            })
+            setShowForm(true)
+          } else if (res.tapIndex === 1) {
+            // 设为维修中
+            Taro.showModal({
+              title: '设置维修中',
+              content: `确定将 ${bed.bedNumber}号床 ${getPositionLabel(bed.position)} 设置为维修中吗？`,
+              confirmText: '确定',
+              cancelText: '取消',
+              success: async (modalRes) => {
+                if (modalRes.confirm) {
+                  try {
+                    const result = await Network.request({
+                      url: `/api/beds/maintenance/${bed.id}`,
+                      method: 'POST'
+                    })
+                    if (result.data?.code === 200) {
+                      Taro.showToast({ title: '已设为维修中', icon: 'success' })
+                      loadBeds()
+                    } else {
+                      Taro.showToast({ title: result.data?.msg || '设置失败', icon: 'none' })
+                    }
+                  } catch (error) {
+                    console.error('设置维修中失败:', error)
+                    Taro.showToast({ title: '设置失败，请稍后重试', icon: 'none' })
+                  }
+                }
+              }
+            })
+          }
+        }
       })
-      setShowForm(true)
     } else {
       // 已入住的床位，点击名字查看详情（不需要登录）
       if (bed.checkIn) {
@@ -290,41 +325,6 @@ const CheckInPage = () => {
     } finally {
       setSubmitting(false)
     }
-  }
-
-  const handleSetMaintenance = async () => {
-    if (!selectedBed) return
-
-    Taro.showModal({
-      title: '设置维修中',
-      content: `确定将 ${selectedBed.bedNumber}号床 ${getPositionLabel(selectedBed.position)} 设置为维修中吗？维修中的床位将无法入住。`,
-      confirmText: '确定',
-      cancelText: '取消',
-      success: async (res) => {
-        if (res.confirm) {
-          setSubmitting(true)
-          try {
-            const result = await Network.request({
-              url: `/api/beds/maintenance/${selectedBed.id}`,
-              method: 'POST'
-            })
-
-            if (result.data?.code === 200) {
-              Taro.showToast({ title: '已设为维修中', icon: 'success' })
-              setShowForm(false)
-              loadBeds()
-            } else {
-              Taro.showToast({ title: result.data?.msg || '设置失败', icon: 'none' })
-            }
-          } catch (error) {
-            console.error('设置维修中失败:', error)
-            Taro.showToast({ title: '设置失败', icon: 'none' })
-          } finally {
-            setSubmitting(false)
-          }
-        }
-      }
-    })
   }
 
   const getPositionLabel = (position: string) => {
@@ -660,28 +660,18 @@ const CheckInPage = () => {
               </Picker>
             </View>
           </View>
-          <DialogFooter className="flex-col gap-2">
-            <View className="flex flex-row gap-2 w-full">
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={() => setShowForm(false)}
-              >取消</Button>
-              <Button 
-                className="flex-1 bg-blue-600 text-white" 
-                onClick={handleFormSubmit}
-                disabled={submitting}
-              >
-                {submitting ? '提交中...' : '确认入住'}
-              </Button>
-            </View>
+          <DialogFooter className="flex flex-row gap-2">
             <Button 
-              variant="outline"
-              className="w-full border-orange-300 text-orange-600 hover:bg-orange-50"
-              onClick={handleSetMaintenance}
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setShowForm(false)}
+            >取消</Button>
+            <Button 
+              className="flex-1 bg-blue-600 text-white" 
+              onClick={handleFormSubmit}
               disabled={submitting}
             >
-              设为维修中
+              {submitting ? '提交中...' : '确认入住'}
             </Button>
           </DialogFooter>
         </DialogContent>
