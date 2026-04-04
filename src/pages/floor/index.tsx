@@ -56,6 +56,21 @@ const FloorPage = () => {
 
   // 搜索相关状态
   const [searchKeyword, setSearchKeyword] = useState('')
+  const [allResidents, setAllResidents] = useState<Array<{
+    checkInId: number
+    name: string
+    idCard: string
+    phone: string
+    checkInTime: string
+    dormitory: string
+    dormitoryName: string
+    floor: number
+    room: string
+    bedNumber: number
+    position: string
+    positionLabel: string
+    bedId: number
+  }>>([])
   const [searchResults, setSearchResults] = useState<Array<{
     checkInId: number
     name: string
@@ -103,6 +118,7 @@ const FloorPage = () => {
     loadFloorStats()
     loadNotificationCount()
     loadNanTwoFloorStats()
+    loadAllResidents() // 加载所有入住人员数据
   })
 
   usePullDownRefresh(() => {
@@ -142,6 +158,21 @@ const FloorPage = () => {
       }
     } catch (error) {
       console.error('[Floor] 加载南二巷楼层统计失败:', error)
+    }
+  }
+
+  // 加载所有入住人员数据（用于前端搜索）
+  const loadAllResidents = async () => {
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/list'
+      })
+      if (res.data?.code === 200 && res.data?.data) {
+        setAllResidents(res.data.data)
+        console.log('[Floor] 加载入住人员数据:', res.data.data.length, '条')
+      }
+    } catch (error) {
+      console.error('[Floor] 加载入住人员数据失败:', error)
     }
   }
 
@@ -314,7 +345,7 @@ const FloorPage = () => {
     })
   }
 
-  // 搜索人员
+  // 搜索人员（前端过滤）
   const handleSearch = async () => {
     if (!searchKeyword.trim()) {
       Taro.showToast({ title: '请输入搜索内容', icon: 'none' })
@@ -323,20 +354,23 @@ const FloorPage = () => {
 
     setSearching(true)
     try {
-      const res = await Network.request({
-        url: `/api/checkin/search?keyword=${encodeURIComponent(searchKeyword.trim())}`
+      const keyword = searchKeyword.trim().toLowerCase()
+
+      // 在前端过滤数据
+      const results = allResidents.filter(resident => {
+        return (
+          resident.name.toLowerCase().includes(keyword) ||
+          resident.phone.includes(keyword) ||
+          resident.idCard.includes(keyword)
+        )
       })
 
-      console.log('[Floor] 搜索结果:', res.data)
+      console.log('[Floor] 搜索结果:', results.length, '条')
+      setSearchResults(results)
+      setShowSearchResults(true)
 
-      if (res.data?.code === 200) {
-        setSearchResults(res.data.data || [])
-        setShowSearchResults(true)
-        if (res.data.data?.length === 0) {
-          Taro.showToast({ title: '未找到相关人员', icon: 'none' })
-        }
-      } else {
-        Taro.showToast({ title: res.data?.msg || '搜索失败', icon: 'none' })
+      if (results.length === 0) {
+        Taro.showToast({ title: '未找到相关人员', icon: 'none' })
       }
     } catch (error) {
       console.error('[Floor] 搜索失败:', error)

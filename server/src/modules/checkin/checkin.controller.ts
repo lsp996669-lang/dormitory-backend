@@ -40,4 +40,10 @@ export class CheckInController {
     console.log('搜索人员请求:', keyword);
     return await this.checkInService.searchResident(keyword);
   }
+
+  @Get('list')
+  async getAllCheckIns() {
+    console.log('获取所有入住人员请求');
+    return await this.checkInService.getAllCheckIns();
+  }
 }
