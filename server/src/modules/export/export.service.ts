@@ -163,13 +163,18 @@ export class ExportService {
       .from('check_outs')
       .select('*');
 
-    // 获取所有床位信息（南四巷180号，1-4楼）
-    const { data: allBeds } = await client
+    // 获取所有涉及的床位
+    const allBedIds = [
+      ...(checkIns?.map((r: any) => r.bed_id) || []),
+      ...(checkOuts?.map((r: any) => r.bed_id) || []),
+    ];
+    const uniqueBedIds = [...new Set(allBedIds)];
+    const { data: beds } = await client
       .from('beds')
       .select('*')
-      .eq('dormitory', 'nansi');
+      .in('id', uniqueBedIds);
     
-    const bedMap = new Map(allBeds?.map((b: any) => [b.id, b]));
+    const bedMap = new Map(beds?.map((b: any) => [b.id, b]));
 
     // 排序数据
     const sortedCheckIns = this.sortByFloorAndBed(checkIns || [], bedMap);
@@ -179,64 +184,40 @@ export class ExportService {
     workbook.creator = '宿舍管理系统';
     workbook.created = new Date();
 
-    // 按楼层分组入住人员
-    const floorCheckIns: Map<number, any[]> = new Map();
-    for (let floor = 2; floor <= 4; floor++) {
-      floorCheckIns.set(floor, []);
-    }
-
-    sortedCheckIns.forEach((record: any) => {
-      const bed = bedMap.get(record.bed_id);
-      if (bed && bed.floor >= 2 && bed.floor <= 4) {
-        const floorRecords = floorCheckIns.get(bed.floor) || [];
-        floorRecords.push(record);
-        floorCheckIns.set(bed.floor, floorRecords);
-      }
+    // Sheet 1: 当前入住人员
+    const sheet1 = workbook.addWorksheet('当前入住人员', {
+      views: [{ state: 'frozen', ySplit: 1 }],
     });
 
-    // 创建各楼层工作表（2楼、3楼、4楼）
-    const floorColors: Record<number, string> = {
-      2: 'FF4472C4', // 蓝色
-      3: 'FF70AD47', // 绿色
-      4: 'FFED7D31', // 橙色
-    };
+    sheet1.columns = [
+      { header: '序号', key: 'index', width: 8 },
+      { header: '入住日期', key: 'checkInDate', width: 14 },
+      { header: '楼层', key: 'floor', width: 8 },
+      { header: '床号', key: 'bedNumber', width: 10 },
+      { header: '铺位', key: 'position', width: 8 },
+      { header: '姓名', key: 'name', width: 20 },
+      { header: '身份证号', key: 'idCard', width: 22 },
+      { header: '联系电话', key: 'phone', width: 15 },
+    ];
 
-    for (let floor = 2; floor <= 4; floor++) {
-      const floorRecords = floorCheckIns.get(floor) || [];
-      const sheet = workbook.addWorksheet(`${floor}楼`, {
-        views: [{ state: 'frozen', ySplit: 1 }],
+    this.applyHeaderStyle(sheet1.getRow(1), 'FF4472C4');
+    sortedCheckIns.forEach((record: any, index: number) => {
+      const bed = bedMap.get(record.bed_id);
+      sheet1.addRow({
+        index: index + 1,
+        checkInDate: this.formatDate(record.check_in_time),
+        floor: `${bed?.floor || '-'}楼`,
+        bedNumber: `${bed?.bed_number || '-'}号床`,
+        position: bed?.position === 'upper' ? '上铺' : '下铺',
+        name: record.name,
+        idCard: record.id_card,
+        phone: record.phone,
       });
+    });
+    this.applyDataStyle(sheet1, 'FFF2F2F2');
 
-      sheet.columns = [
-        { header: '序号', key: 'index', width: 8 },
-        { header: '入住日期', key: 'checkInDate', width: 14 },
-        { header: '床号', key: 'bedNumber', width: 10 },
-        { header: '铺位', key: 'position', width: 8 },
-        { header: '姓名', key: 'name', width: 20 },
-        { header: '身份证号', key: 'idCard', width: 22 },
-        { header: '联系电话', key: 'phone', width: 15 },
-      ];
-
-      this.applyHeaderStyle(sheet.getRow(1), floorColors[floor]);
-      
-      floorRecords.forEach((record: any, index: number) => {
-        const bed = bedMap.get(record.bed_id);
-        sheet.addRow({
-          index: index + 1,
-          checkInDate: this.formatDate(record.check_in_time),
-          bedNumber: `${bed?.bed_number || '-'}号床`,
-          position: bed?.position === 'upper' ? '上铺' : '下铺',
-          name: record.name,
-          idCard: record.id_card,
-          phone: record.phone,
-        });
-      });
-      
-      this.applyDataStyle(sheet, floor % 2 === 0 ? 'FFDEEBF7' : 'FFF2F2F2');
-    }
-
-    // 创建"撤离人员"工作表
-    const sheet2 = workbook.addWorksheet('撤离人员', {
+    // Sheet 2: 搬离人员
+    const sheet2 = workbook.addWorksheet('搬离人员', {
       views: [{ state: 'frozen', ySplit: 1 }],
     });
 
@@ -252,7 +233,7 @@ export class ExportService {
       { header: '联系电话', key: 'phone', width: 15 },
     ];
 
-    this.applyHeaderStyle(sheet2.getRow(1), 'FF7030A0'); // 紫色
+    this.applyHeaderStyle(sheet2.getRow(1), 'FF70AD47');
     sortedCheckOuts.forEach((record: any, index: number) => {
       const bed = bedMap.get(record.bed_id);
       sheet2.addRow({
@@ -267,16 +248,20 @@ export class ExportService {
         phone: record.phone,
       });
     });
-    this.applyDataStyle(sheet2, 'FFE2D5F0');
+    this.applyDataStyle(sheet2, 'FFE2EFDA');
 
-    // 创建"统计汇总"工作表
+    // Sheet 3: 统计汇总
     const sheet3 = workbook.addWorksheet('统计汇总');
 
     const floorStats: any[] = [];
-    for (let floor = 2; floor <= 4; floor++) {
-      const floorBeds = allBeds?.filter((b: any) => b.floor === floor) || [];
-      const total = floorBeds.length;
-      const occupied = floorBeds.filter((b: any) => b.status === 'occupied').length;
+    for (let floor = 1; floor <= 4; floor++) {
+      const { data: beds } = await client
+        .from('beds')
+        .select('status')
+        .eq('floor', floor);
+      
+      const total = beds?.length || 30;
+      const occupied = beds?.filter(b => b.status === 'occupied').length || 0;
       
       floorStats.push({
         floor: `${floor}楼`,
