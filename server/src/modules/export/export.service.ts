@@ -337,9 +337,6 @@ export class ExportService {
 
     // 按楼层分组入住数据
     const checkInsByFloor = this.groupByFloor(checkIns || [], bedMap);
-    
-    // 按楼层分组搬离数据
-    const checkOutsByFloor = this.groupByFloor(checkOuts || [], bedMap);
 
     // 获取该宿舍楼的楼层列表（排序）
     const floors = [...new Set(beds?.map((b: any) => b.floor))].sort((a, b) => a - b);
@@ -388,45 +385,43 @@ export class ExportService {
       this.applyDataStyle(sheet, 'FFF2F2F2');
     }
 
-    // 为每个楼层创建搬离人员 sheet
-    for (const floor of floors) {
-      const floorCheckOuts = checkOutsByFloor.get(floor) || [];
-      const sortedRecords = this.sortByBed(floorCheckOuts, bedMap);
+    // 搬离人员 - 单个 sheet，按搬离时间倒序排列（最新的在前面）
+    const sortedCheckOuts = this.sortByCheckOutTime(checkOuts || []);
 
-      const sheetName = `${floor}楼搬离人员`;
-      const sheet = workbook.addWorksheet(sheetName, {
-        views: [{ state: 'frozen', ySplit: 1 }],
+    const checkOutSheet = workbook.addWorksheet('搬离人员', {
+      views: [{ state: 'frozen', ySplit: 1 }],
+    });
+
+    checkOutSheet.columns = [
+      { header: '序号', key: 'index', width: 8 },
+      { header: '入住日期', key: 'checkInDate', width: 14 },
+      { header: '搬离日期', key: 'checkOutDate', width: 14 },
+      { header: '楼层', key: 'floor', width: 8 },
+      { header: '房间', key: 'room', width: 10 },
+      { header: '床号', key: 'bedNumber', width: 10 },
+      { header: '铺位', key: 'position', width: 8 },
+      { header: '姓名', key: 'name', width: 20 },
+      { header: '身份证号', key: 'idCard', width: 22 },
+      { header: '联系电话', key: 'phone', width: 15 },
+    ];
+
+    this.applyHeaderStyle(checkOutSheet.getRow(1), 'FF70AD47');
+    sortedCheckOuts.forEach((record: any, index: number) => {
+      const bed = bedMap.get(record.bed_id);
+      checkOutSheet.addRow({
+        index: index + 1,
+        checkInDate: this.formatDate(record.check_in_time),
+        checkOutDate: this.formatDate(record.check_out_time),
+        floor: `${bed?.floor || '-'}楼`,
+        room: bed?.room || '-',
+        bedNumber: `${bed?.bed_number || '-'}号床`,
+        position: bed?.position === 'upper' ? '上铺' : '下铺',
+        name: record.name,
+        idCard: record.id_card,
+        phone: record.phone,
       });
-
-      sheet.columns = [
-        { header: '序号', key: 'index', width: 8 },
-        { header: '入住日期', key: 'checkInDate', width: 14 },
-        { header: '搬离日期', key: 'checkOutDate', width: 14 },
-        { header: '房间', key: 'room', width: 10 },
-        { header: '床号', key: 'bedNumber', width: 10 },
-        { header: '铺位', key: 'position', width: 8 },
-        { header: '姓名', key: 'name', width: 20 },
-        { header: '身份证号', key: 'idCard', width: 22 },
-        { header: '联系电话', key: 'phone', width: 15 },
-      ];
-
-      this.applyHeaderStyle(sheet.getRow(1), 'FF70AD47');
-      sortedRecords.forEach((record: any, index: number) => {
-        const bed = bedMap.get(record.bed_id);
-        sheet.addRow({
-          index: index + 1,
-          checkInDate: this.formatDate(record.check_in_time),
-          checkOutDate: this.formatDate(record.check_out_time),
-          room: bed?.room || '-',
-          bedNumber: `${bed?.bed_number || '-'}号床`,
-          position: bed?.position === 'upper' ? '上铺' : '下铺',
-          name: record.name,
-          idCard: record.id_card,
-          phone: record.phone,
-        });
-      });
-      this.applyDataStyle(sheet, 'FFE2EFDA');
-    }
+    });
+    this.applyDataStyle(checkOutSheet, 'FFE2EFDA');
 
     // 统计汇总 sheet
     const sheet3 = workbook.addWorksheet('统计汇总');
@@ -564,6 +559,18 @@ export class ExportService {
       if (posA === 'upper' && posB === 'lower') return 1;
 
       return 0;
+    });
+  }
+
+  /**
+   * 按搬离时间倒序排序（最新的在前面）
+   */
+  private sortByCheckOutTime(records: any[]): any[] {
+    return [...records].sort((a, b) => {
+      const timeA = a.check_out_time ? new Date(a.check_out_time).getTime() : 0;
+      const timeB = b.check_out_time ? new Date(b.check_out_time).getTime() : 0;
+      // 倒序：最新的在前面
+      return timeB - timeA;
     });
   }
 
