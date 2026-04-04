@@ -46,4 +46,10 @@ export class CheckInController {
     console.log('获取所有入住人员请求');
     return await this.checkInService.getAllCheckIns();
   }
+
+  @Post('list')
+  async getAllCheckInsPost() {
+    console.log('获取所有入住人员请求 (POST)');
+    return await this.checkInService.getAllCheckIns();
+  }
 }
