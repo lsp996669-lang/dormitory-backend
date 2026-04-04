@@ -1,9 +1,15 @@
 {
   "version": 2,
-  "outputDirectory": "dist",
+  "buildCommand": null,
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node@5",
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "destination": "/api"
     }
   ]

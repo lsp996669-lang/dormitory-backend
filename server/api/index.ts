@@ -1,3 +1,4 @@
+import 'tsconfig-paths/register';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import * as express from 'express';
@@ -12,7 +13,7 @@ async function bootstrap() {
 
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
-  
+
   cachedApp = await NestFactory.create(AppModule, adapter, {
     logger: false,
   });
