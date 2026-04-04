@@ -8,7 +8,8 @@ RUN npm install -g pnpm
 
 # 复制 package.json 文件
 COPY package.json ./
-COPY pnpm-lock.yaml* ./
+# 如果有 pnpm-lock.yaml，复制它
+# COPY pnpm-lock.yaml* ./
 
 # 复制 nest-cli.json 配置
 COPY nest-cli.json ./
@@ -34,4 +35,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # 启动命令
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
