@@ -280,6 +280,7 @@ export class BedsService implements OnModuleInit {
     const roomStats = rooms.map(roomConfig => {
       const roomBeds = beds?.filter(b => b.room === roomConfig.room) || [];
       const occupiedCount = roomBeds.filter(b => b.status === 'occupied').length;
+      const maintenanceCount = roomBeds.filter(b => b.status === 'maintenance').length;
       const totalPositions = roomConfig.bedCount * 2; // 上下铺
       
       return {
@@ -287,7 +288,8 @@ export class BedsService implements OnModuleInit {
         bedCount: roomConfig.bedCount,
         totalBeds: totalPositions,
         occupiedBeds: occupiedCount,
-        emptyBeds: totalPositions - occupiedCount,
+        maintenanceBeds: maintenanceCount,
+        emptyBeds: totalPositions - occupiedCount - maintenanceCount,
       };
     });
 
