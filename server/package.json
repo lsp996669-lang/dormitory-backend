@@ -23,7 +23,6 @@
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
-    "exceljs": "^4.4.0",
     "express": "5.2.1",
     "pg": "^8.16.3",
     "rxjs": "^7.8.1",
@@ -37,6 +36,7 @@
     "@types/node": "^22.10.2",
     "@vercel/node": "^5.7.0",
     "drizzle-kit": "^0.31.8",
+    "exceljs": "^4.4.0",
     "typescript": "^5.7.2"
   }
 }
