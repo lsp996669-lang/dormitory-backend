@@ -224,9 +224,6 @@ importers:
       drizzle-zod:
         specifier: ^0.8.3
         version: 0.8.3(drizzle-orm@0.45.1(@types/better-sqlite3@7.6.13)(better-sqlite3@11.10.0)(pg@8.17.2))(zod@4.3.5)
-      exceljs:
-        specifier: ^4.4.0
-        version: 4.4.0
       express:
         specifier: 5.2.1
         version: 5.2.1
@@ -258,6 +255,9 @@ importers:
       '@vercel/node':
         specifier: ^5.7.0
         version: 5.7.0(rollup@3.29.5)
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
