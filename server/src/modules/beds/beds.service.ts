@@ -740,4 +740,59 @@ export class BedsService implements OnModuleInit {
       },
     };
   }
+
+  /**
+   * 互换两个入住人员的床位（两人互换）
+   * @param checkInIdA 入住记录A的ID
+   * @param checkInIdB 入住记录B的ID
+   */
+  async swapBeds(checkInIdA: number, checkInIdB: number) {
+    const client = getSupabaseClient();
+
+    // 1. 获取两条入住记录
+    const { data: checkInA, error: errorA } = await client
+      .from('check_ins')
+      .select('id, bed_id')
+      .eq('id', checkInIdA)
+      .single();
+
+    const { data: checkInB, error: errorB } = await client
+      .from('check_ins')
+      .select('id, bed_id')
+      .eq('id', checkInIdB)
+      .single();
+
+    if (errorA || errorB || !checkInA || !checkInB) {
+      throw new Error('入住记录不存在');
+    }
+
+    // 2. 互换床位
+    const { error: updateErrorA } = await client
+      .from('check_ins')
+      .update({ bed_id: checkInB.bed_id, updated_at: new Date().toISOString() })
+      .eq('id', checkInIdA);
+
+    const { error: updateErrorB } = await client
+      .from('check_ins')
+      .update({ bed_id: checkInA.bed_id, updated_at: new Date().toISOString() })
+      .eq('id', checkInIdB);
+
+    if (updateErrorA || updateErrorB) {
+      console.error('互换床位失败:', updateErrorA, updateErrorB);
+      throw new Error('互换床位失败');
+    }
+
+    console.log('互换床位成功:', { checkInIdA, newBedIdA: checkInB.bed_id, checkInIdB, newBedIdB: checkInA.bed_id });
+
+    return {
+      code: 200,
+      msg: '互换成功',
+      data: {
+        checkInIdA,
+        newBedIdA: checkInB.bed_id,
+        checkInIdB,
+        newBedIdB: checkInA.bed_id,
+      },
+    };
+  }
 }

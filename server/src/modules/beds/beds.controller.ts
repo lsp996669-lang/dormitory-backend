@@ -17,6 +17,12 @@ export class BedsController {
     return await this.bedsService.initBeds();
   }
 
+  @Post('swap')
+  async swapBeds(@Body() body: { checkInIdA: number; checkInIdB: number }) {
+    console.log('互换床位请求:', body);
+    return await this.bedsService.swapBeds(body.checkInIdA, body.checkInIdB);
+  }
+
   // 南二巷宿舍接口
   @Get('nantwo/floors')
   async getNanTwoFloors() {

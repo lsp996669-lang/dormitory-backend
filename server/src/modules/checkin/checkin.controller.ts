@@ -52,4 +52,16 @@ export class CheckInController {
     console.log('获取所有入住人员请求 (POST)');
     return await this.checkInService.getAllCheckIns();
   }
+
+  @Post('toggle-station')
+  async toggleStationMarked(@Body() body: { checkInId: number; value?: boolean }) {
+    console.log('切换站点标注请求:', body);
+    return await this.checkInService.toggleStationMarked(body.checkInId, body.value);
+  }
+
+  @Post('toggle-rider')
+  async toggleRider(@Body() body: { checkInId: number; value?: boolean }) {
+    console.log('切换骑手状态请求:', body);
+    return await this.checkInService.toggleRider(body.checkInId, body.value);
+  }
 }

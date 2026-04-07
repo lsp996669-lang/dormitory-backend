@@ -1,4 +1,4 @@
-import { View, Text, Picker } from '@tarojs/components'
+import { View, Text, Picker, Input } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2, ArrowRight, Pencil } from 'lucide-react-taro'
+import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2, ArrowRight, Pencil, Copy, MapPin } from 'lucide-react-taro'
 import { Network } from '@/network'
 import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
@@ -41,17 +41,23 @@ type DateEditType = 'checkin-checkin' | 'checkout-checkin' | 'checkout-checkout'
 
 const DetailPage = () => {
   const router = useRouter()
-  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId } = router.params
+  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId, isStationMarked: initialStationMarked, isRider: initialIsRider } = router.params
   const [submitting, setSubmitting] = useState(false)
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showTransferDialog, setShowTransferDialog] = useState(false)
   const [showDateEditDialog, setShowDateEditDialog] = useState(false)
   const [showDatePasswordDialog, setShowDatePasswordDialog] = useState(false)
+  const [showSwapDialog, setShowSwapDialog] = useState(false)
   const [checkOutDate, setCheckOutDate] = useState(() => {
     const today = new Date()
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   })
+
+  // 站点标注相关状态
+  const [isStationMarked, setIsStationMarked] = useState(initialStationMarked === 'true')
+  const [isRider, setIsRider] = useState(initialIsRider === 'true')
+  const [swapPartnerCheckInId, setSwapPartnerCheckInId] = useState<string>('')
 
   // 日期编辑相关状态
   const [dateEditType, setDateEditType] = useState<DateEditType>(null)
@@ -270,6 +276,118 @@ const DetailPage = () => {
     return '修改日期'
   }
 
+  // 复制电话号码
+  const handleCopyPhone = () => {
+    if (!decodedPhone || decodedPhone === '-') {
+      Taro.showToast({ title: '无电话号码', icon: 'none' })
+      return
+    }
+    Taro.setClipboardData({
+      data: decodedPhone,
+      success: () => {
+        Taro.showToast({ title: '已复制', icon: 'success' })
+      }
+    })
+  }
+
+  // 切换站点标注状态
+  const handleToggleStationMarker = async () => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    if (!checkInId) return
+    setSubmitting(true)
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-station',
+        method: 'POST',
+        data: { checkInId: parseInt(checkInId as string, 10) }
+      })
+      if (res.data?.code === 200) {
+        setIsStationMarked(!isStationMarked)
+        Taro.showToast({ title: !isStationMarked ? '已标注' : '已取消标注', icon: 'success' })
+      } else {
+        Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('切换站点标注失败:', error)
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // 切换骑手状态
+  const handleToggleRider = async () => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    if (!checkInId) return
+    setSubmitting(true)
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-rider',
+        method: 'POST',
+        data: { checkInId: parseInt(checkInId as string, 10) }
+      })
+      if (res.data?.code === 200) {
+        setIsRider(!isRider)
+        Taro.showToast({ title: !isRider ? '已标记骑手' : '已取消骑手', icon: 'success' })
+      } else {
+        Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('切换骑手状态失败:', error)
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // 执行床位互换
+  const handleSwapBed = async () => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    if (!checkInId || !swapPartnerCheckInId) {
+      Taro.showToast({ title: '请输入对方入住编号', icon: 'none' })
+      return
+    }
+    const partnerId = parseInt(swapPartnerCheckInId, 10)
+    if (Number.isNaN(partnerId) || partnerId === parseInt(checkInId as string, 10)) {
+      Taro.showToast({ title: '入住编号无效或不能与自己互换', icon: 'none' })
+      return
+    }
+    setSubmitting(true)
+    try {
+      const res = await Network.request({
+        url: '/api/beds/swap',
+        method: 'POST',
+        data: {
+          checkInIdA: parseInt(checkInId as string, 10),
+          checkInIdB: partnerId
+        }
+      })
+      if (res.data?.code === 200) {
+        Taro.showToast({ title: '互换成功', icon: 'success' })
+        setShowSwapDialog(false)
+        setTimeout(() => {
+          Taro.navigateBack()
+        }, 1500)
+      } else {
+        Taro.showToast({ title: res.data?.msg || '互换失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('床位互换失败:', error)
+      Taro.showToast({ title: '互换失败，请重试', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleCheckOut = async () => {
     // 检查登录状态
     if (!checkLogin()) {
@@ -424,9 +542,38 @@ const DetailPage = () => {
 
             <View className="flex items-center gap-3">
               <Phone size={20} color="#6b7280" />
-              <View>
+              <View className="flex-1">
                 <Text className="text-xs text-gray-500 block">手机号</Text>
                 <Text className="text-sm text-gray-800">{decodedPhone}</Text>
+              </View>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={handleCopyPhone}
+              >
+                <Copy size={14} color="#6b7280" />
+              </Button>
+            </View>
+
+            <View className="flex items-center gap-3">
+              <MapPin size={20} color="#6b7280" />
+              <View className="flex-1">
+                <Text className="text-xs text-gray-500 block">站点标注</Text>
+                <View className="flex items-center gap-2 mt-1">
+                  <View
+                    className={`px-2 py-1 rounded text-xs font-medium cursor-pointer border ${isStationMarked ? 'bg-white text-gray-700 border-gray-300' : 'bg-red-500 text-white border-red-500'}`}
+                    onClick={handleToggleStationMarker}
+                  >
+                    {isStationMarked ? '已标注' : '未标注'}
+                  </View>
+                  <View
+                    className={`px-2 py-1 rounded text-xs font-medium cursor-pointer border ${isRider ? 'bg-green-500 text-white border-green-500' : 'bg-gray-200 text-gray-500 border-gray-200'}`}
+                    onClick={handleToggleRider}
+                  >
+                    {isRider ? '众包骑手' : '非骑手'}
+                  </View>
+                </View>
               </View>
             </View>
 
@@ -474,6 +621,17 @@ const DetailPage = () => {
           {/* 操作按钮：只在未搬离时显示 */}
           {!hasCheckOut && checkInId && bedId && (
             <View className="mt-6 pt-4 border-t border-gray-200 space-y-3">
+              {/* 床位互换按钮 */}
+              <Button
+                className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                onClick={() => setShowSwapDialog(true)}
+              >
+                <View className="flex items-center gap-2">
+                  <ArrowRight size={18} color="#fff" className="rotate-180" />
+                  <Text className="text-white">床位互换</Text>
+                </View>
+              </Button>
+
               {/* 转移床位按钮 */}
               <Button
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white"
@@ -791,6 +949,65 @@ const DetailPage = () => {
               disabled={submitting}
             >
               {submitting ? '处理中...' : '确认修改'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 床位互换对话框 */}
+      <Dialog open={showSwapDialog} onOpenChange={setShowSwapDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>床位互换</DialogTitle>
+          </DialogHeader>
+          <View className="py-4">
+            <View className="space-y-4">
+              <View className="bg-purple-50 rounded-lg p-3">
+                <Text className="text-xs text-gray-500 block mb-1">当前人员</Text>
+                <Text className="text-sm text-purple-600 font-medium">{decodedName}</Text>
+                <Text className="text-xs text-gray-500 block">
+                  {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
+                </Text>
+                <Text className="text-xs text-gray-400 block mt-1">
+                  入住编号: {checkInId}
+                </Text>
+              </View>
+
+              <View className="bg-blue-50 rounded-lg p-3">
+                <Text className="text-xs text-gray-500 block mb-2">互换操作说明</Text>
+                <Text className="text-xs text-gray-600 block leading-5">
+                  请输入对方人员的入住编号，两人床位将对调。{'\\n'}
+                  入住编号可在人员详情页顶部查看。
+                </Text>
+              </View>
+
+              <View>
+                <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                  <Text>对方入住编号</Text>
+                </Text>
+                <View className="bg-gray-50 rounded-xl px-4 py-3">
+                  <Input
+                    className="w-full bg-transparent"
+                    placeholder="请输入对方入住编号"
+                    type="number"
+                    value={swapPartnerCheckInId}
+                    onInput={(e) => setSwapPartnerCheckInId(e.detail.value)}
+                  />
+                </View>
+                <Text className="text-xs text-red-500 mt-1">
+                  两人编号不能相同
+                </Text>
+              </View>
+            </View>
+          </View>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSwapDialog(false)}>取消</Button>
+            <Button
+              className="bg-purple-500 text-white"
+              onClick={handleSwapBed}
+              disabled={submitting || !swapPartnerCheckInId}
+            >
+              {submitting ? '处理中...' : '确认互换'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -69,6 +69,7 @@ export class CheckInService {
         bedNumber: bed.bed_number,
         position: bed.position,
         name,
+        dormitory: bed.dormitory,
       });
     }
 
@@ -283,7 +284,9 @@ export class CheckInService {
         id_card,
         phone,
         check_in_time,
-        bed_id
+        bed_id,
+        is_station_marked,
+        is_rider
       `)
       .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,id_card.ilike.%${searchTerm}%`);
 
@@ -330,6 +333,8 @@ export class CheckInService {
         position: bed?.position || 'upper',
         positionLabel: bed?.position === 'upper' ? '上铺' : '下铺',
         bedId: checkIn.bed_id,
+        isStationMarked: checkIn.is_station_marked ?? false,
+        isRider: checkIn.is_rider ?? false,
       };
     });
 
@@ -357,7 +362,9 @@ export class CheckInService {
         id_card,
         phone,
         check_in_time,
-        bed_id
+        bed_id,
+        is_station_marked,
+        is_rider
       `);
 
     if (error) {
@@ -403,6 +410,8 @@ export class CheckInService {
         position: bed?.position || 'upper',
         positionLabel: bed?.position === 'upper' ? '上铺' : '下铺',
         bedId: checkIn.bed_id,
+        isStationMarked: checkIn.is_station_marked ?? false,
+        isRider: checkIn.is_rider ?? false,
       };
     });
 
@@ -412,6 +421,77 @@ export class CheckInService {
       code: 200,
       msg: '获取成功',
       data: results,
+    };
+  }
+
+  /**
+   * 切换站点标注状态
+   */
+  async toggleStationMarked(checkInId: number, value?: boolean) {
+    const client = getSupabaseClient();
+
+    // 获取当前状态
+    const { data: current, error: getError } = await client
+      .from('check_ins')
+      .select('is_station_marked, is_rider')
+      .eq('id', checkInId)
+      .single();
+
+    if (getError || !current) {
+      throw new Error('记录不存在');
+    }
+
+    const newValue = value !== undefined ? value : !current.is_station_marked;
+
+    const { error: updateError } = await client
+      .from('check_ins')
+      .update({ is_station_marked: newValue, updated_at: new Date().toISOString() })
+      .eq('id', checkInId);
+
+    if (updateError) {
+      console.error('更新站点标注失败:', updateError);
+      throw new Error('更新失败');
+    }
+
+    return {
+      code: 200,
+      msg: '更新成功',
+      data: { isStationMarked: newValue },
+    };
+  }
+
+  /**
+   * 切换骑手状态
+   */
+  async toggleRider(checkInId: number, value?: boolean) {
+    const client = getSupabaseClient();
+
+    const { data: current, error: getError } = await client
+      .from('check_ins')
+      .select('is_station_marked, is_rider')
+      .eq('id', checkInId)
+      .single();
+
+    if (getError || !current) {
+      throw new Error('记录不存在');
+    }
+
+    const newValue = value !== undefined ? value : !current.is_rider;
+
+    const { error: updateError } = await client
+      .from('check_ins')
+      .update({ is_rider: newValue, updated_at: new Date().toISOString() })
+      .eq('id', checkInId);
+
+    if (updateError) {
+      console.error('更新骑手状态失败:', updateError);
+      throw new Error('更新失败');
+    }
+
+    return {
+      code: 200,
+      msg: '更新成功',
+      data: { isRider: newValue },
     };
   }
 }

@@ -31,6 +31,7 @@ interface Notification {
   name: string
   message: string
   created_at: string
+  dormitory?: string
 }
 
 interface NanTwoFloorStats {
@@ -70,6 +71,8 @@ const FloorPage = () => {
     position: string
     positionLabel: string
     bedId: number
+    isStationMarked?: boolean
+    isRider?: boolean
   }>>([])
   const [searchResults, setSearchResults] = useState<Array<{
     checkInId: number
@@ -85,6 +88,8 @@ const FloorPage = () => {
     position: string
     positionLabel: string
     bedId: number
+    isStationMarked?: boolean
+    isRider?: boolean
   }>>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -384,7 +389,7 @@ const FloorPage = () => {
   const handleSearchResultClick = (result: typeof searchResults[0]) => {
     setShowSearchResults(false)
     Taro.navigateTo({
-      url: `/pages/detail/index?name=${encodeURIComponent(result.name)}&idCard=${encodeURIComponent(result.idCard)}&phone=${encodeURIComponent(result.phone)}&checkInTime=${encodeURIComponent(result.checkInTime)}&floor=${result.floor}&bedNumber=${result.bedNumber}&position=${result.position}&checkInId=${result.checkInId}&bedId=${result.bedId}&dormitory=${result.dormitory}&room=${result.room || ''}`
+      url: `/pages/detail/index?name=${encodeURIComponent(result.name)}&idCard=${encodeURIComponent(result.idCard)}&phone=${encodeURIComponent(result.phone)}&checkInTime=${encodeURIComponent(result.checkInTime)}&floor=${result.floor}&bedNumber=${result.bedNumber}&position=${result.position}&checkInId=${result.checkInId}&bedId=${result.bedId}&dormitory=${result.dormitory}&room=${result.room || ''}&isStationMarked=${result.isStationMarked ?? false}&isRider=${result.isRider ?? false}`
     })
   }
 
@@ -644,6 +649,9 @@ const FloorPage = () => {
                     <View className="flex items-start justify-between">
                       <View className="flex-1">
                         <View className="flex items-center gap-1 mb-1">
+                          <Text className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-600 font-medium">
+                            {notification.dormitory === 'nantwo' ? '南二巷' : '南四巷'}
+                          </Text>
                           <User size={12} color="#6b7280" />
                           <Text className="text-sm font-medium text-gray-800">{notification.name}</Text>
                         </View>
