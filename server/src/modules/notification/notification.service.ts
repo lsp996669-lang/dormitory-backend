@@ -15,7 +15,9 @@ export class NotificationService {
     const client = getSupabaseClient();
 
     const positionLabel = data.position === 'upper' ? '上铺' : '下铺';
-    const dormitoryLabel = data.dormitory === 'nantwo' ? '南二巷24号' : '南四巷180号';
+    // 确保宿舍标识正确传递
+    const dormitoryValue = data.dormitory || 'nansi';
+    const dormitoryLabel = dormitoryValue === 'nantwo' ? '南二巷24号' : '南四巷180号';
     const message = `${data.name} 入住 ${dormitoryLabel} ${data.floor}楼 ${data.bedNumber}号床 ${positionLabel}`;
 
     // 创建通知
@@ -28,7 +30,7 @@ export class NotificationService {
         position: data.position,
         name: data.name,
         message,
-        dormitory: data.dormitory || 'nansi',
+        dormitory: dormitoryValue,
       })
       .select()
       .single();
