@@ -144,6 +144,17 @@ const CheckOutPage = () => {
     return position === 'upper' ? '上铺' : '下铺'
   }
 
+  // 格式化床位显示文本
+  // 南四巷(nansi/nanfour_180)：无房号，显示 "X楼Y号床上铺"
+  // 南二巷(nantwo)：有房号，显示 "X楼Y号房Z号床上铺"
+  const formatBedDisplay = (record: CheckOutRecord) => {
+    const positionLabel = getPositionLabel(record.position)
+    if (record.dormitory === 'nantwo' && record.room) {
+      return `${record.floor}楼${record.room}房${record.bedNumber}号床 ${positionLabel}`
+    }
+    return `${record.floor}楼${record.bedNumber}号床 ${positionLabel}`
+  }
+
   // 按宿舍区域分组
   const nanFourRecords = records.filter(r => r.dormitory === 'nansi' || r.dormitory === 'nanfour_180' || !r.dormitory)
   const nanTwoRecords = records.filter(r => r.dormitory === 'nantwo')
@@ -430,7 +441,7 @@ const CheckOutPage = () => {
                             <View className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
                               <Bed size={14} color="#6b7280" />
                               <Text className="text-sm text-gray-700 font-medium">
-                                {record.bedNumber || '-'}号床，{getPositionLabel(record.position)}
+                                {formatBedDisplay(record)}
                               </Text>
                             </View>
 
@@ -569,7 +580,7 @@ const CheckOutPage = () => {
                               <View className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
                                 <Bed size={14} color="#6b7280" />
                                 <Text className="text-sm text-gray-700 font-medium">
-                                  {record.room ? `${record.room} - ` : ''}{record.bedNumber || '-'}号床，{getPositionLabel(record.position)}
+                                  {formatBedDisplay(record)}
                                 </Text>
                               </View>
 

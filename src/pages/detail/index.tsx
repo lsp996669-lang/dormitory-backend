@@ -41,7 +41,8 @@ type DateEditType = 'checkin-checkin' | 'checkout-checkin' | 'checkout-checkout'
 
 const DetailPage = () => {
   const router = useRouter()
-  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId, isStationMarked: initialStationMarked, isRider: initialIsRider } = router.params
+  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId, dormitory, room: currentRoom, isStationMarked: initialStationMarked, isRider: initialIsRider, stationName: initialStationName } = router.params
+  const isNanTwo = dormitory === 'nantwo'
   const [submitting, setSubmitting] = useState(false)
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
@@ -58,6 +59,7 @@ const DetailPage = () => {
   const [stationName, setStationName] = useState<string | null>(() => {
     if (initialIsRider === 'true') return 'rider'
     if (initialStationMarked === 'true') return 'exhibition' // 默认会展中心站
+    if (initialStationName && initialStationName !== 'null' && initialStationName !== '') return decodeURIComponent(initialStationName)
     return null
   })
   const [showStationDialog, setShowStationDialog] = useState(false)
@@ -70,6 +72,7 @@ const DetailPage = () => {
     bed_number: number
     position: string
     room: string
+    dormitory: string
     isOccupied: boolean
     occupantName?: string
   }>>([])
@@ -225,11 +228,25 @@ const DetailPage = () => {
     return decoded === 'upper' ? '上铺' : '下铺'
   }
 
+  // 格式化床位显示文本
+  // 南四巷(nansi)：无房号，显示 "X楼Y号床上铺"
+  // 南二巷(nantwo)：有房号，显示 "X楼Y号房Z号床上铺"
+  const formatBedDisplay = (bedFloor: number | string, bedNum: number | string, pos: string, bedRoom?: string) => {
+    const positionLabel = pos === 'upper' ? '上铺' : '下铺'
+    if (isNanTwo && bedRoom) {
+      // 南二巷有房号
+      return `${bedFloor}楼${bedRoom}房${bedNum}号床 ${positionLabel}`
+    }
+    // 南四巷无房号
+    return `${bedFloor}楼${bedNum}号床 ${positionLabel}`
+  }
+
   const decodedName = name ? decodeURIComponent(name) : '-'
   const decodedIdCard = idCard ? decodeURIComponent(idCard) : '-'
   const decodedPhone = phone ? decodeURIComponent(phone) : '-'
   const decodedFloor = floor ? decodeURIComponent(floor as string) : '-'
   const decodedBedNumber = bedNumber ? decodeURIComponent(bedNumber as string) : '-'
+  const decodedRoom = currentRoom && currentRoom !== '' ? decodeURIComponent(currentRoom) : ''
   const hasCheckOut = checkOutTime && checkOutTime !== 'undefined'
   const hasCheckOutId = checkOutId && checkOutId !== 'undefined'
 
@@ -545,9 +562,13 @@ const DetailPage = () => {
     if (!targetBedId || !transferData) return '请选择目标床位'
     const bed = transferData.transferableBeds.find(b => b.id === targetBedId)
     if (!bed) return '请选择目标床位'
-    // 南四巷床位不显示房间前缀
-    const roomText = bed.room && !bed.room.startsWith('floor_') ? `${bed.room} - ` : ''
-    return `${roomText}${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    // 根据宿舍类型显示床位信息
+    // 南四巷(nansi)：无房号，显示 "X楼Y号床上铺"
+    // 南二巷(nantwo)：有房号，显示 "X楼Y号房Z号床上铺"
+    if (transferData.dormitory === 'nantwo' && bed.room) {
+      return `${bed.floor}楼${bed.room}房${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    }
+    return `${bed.floor}楼${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
   }
 
   // 获取筛选后的床位列表
@@ -584,9 +605,21 @@ const DetailPage = () => {
     if (!swapTargetBedId) return '请选择目标床位'
     const bed = swapAvailableBeds.find(b => b.id === swapTargetBedId)
     if (!bed) return '请选择目标床位'
-    // 南四巷床位不显示房间前缀
-    const roomText = bed.room && !bed.room.startsWith('floor_') ? `${bed.room} - ` : ''
-    return `${roomText}${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    // 根据宿舍类型显示床位信息
+    // 南四巷(nansi)：无房号，显示 "X楼Y号床上铺"
+    // 南二巷(nantwo)：有房号，显示 "X楼Y号房Z号床上铺"
+    if (bed.dormitory === 'nantwo' && bed.room) {
+      return `${bed.floor}楼${bed.room}房${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    }
+    return `${bed.floor}楼${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+  }
+
+  // 格式化任意床位显示文本
+  const formatSwapBedDisplay = (bed: { floor: number; bed_number: number; position: string; room: string; dormitory: string }) => {
+    if (bed.dormitory === 'nantwo' && bed.room) {
+      return `${bed.floor}楼${bed.room}房${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
+    }
+    return `${bed.floor}楼${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
   }
 
   return (
@@ -610,7 +643,7 @@ const DetailPage = () => {
               <View>
                 <Text className="text-xs text-gray-500 block">床位信息</Text>
                 <Text className="text-sm text-gray-800">
-                  {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
+                  {formatBedDisplay(decodedFloor, decodedBedNumber, position || '', decodedRoom)}
                 </Text>
               </View>
             </View>
@@ -823,8 +856,11 @@ const DetailPage = () => {
                     <Picker
                       mode="selector"
                       range={getFilteredBeds().map(b => {
-                        const roomText = b.room && !b.room.startsWith('floor_') ? `${b.room} - ` : ''
-                        return `${roomText}${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
+                        // 根据宿舍类型显示床位信息
+                        if (transferData.dormitory === 'nantwo' && b.room) {
+                          return `${b.floor}楼${b.room}房${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
+                        }
+                        return `${b.floor}楼${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
                       })}
                       value={targetBedId ? getFilteredBeds().findIndex(b => b.id === targetBedId) : 0}
                       onChange={(e) => {
@@ -851,14 +887,14 @@ const DetailPage = () => {
                       <View className="flex items-center gap-1">
                         <Text className="text-xs text-gray-500">从</Text>
                         <Text className="text-sm text-gray-600 font-medium">
-                          {decodedFloor}楼{decodedBedNumber}号床{getPositionLabel(position)}
+                          {formatBedDisplay(decodedFloor, decodedBedNumber, position || '', decodedRoom)}
                         </Text>
                       </View>
                       <ArrowRight size={14} color="#22c55e" />
                       <View className="flex items-center gap-1">
                         <Text className="text-xs text-gray-500">到</Text>
                         <Text className="text-sm text-green-600 font-medium">
-                          {selectedFloor}楼 {getTargetBedText()}
+                          {getTargetBedText()}
                         </Text>
                       </View>
                     </View>
@@ -1045,7 +1081,7 @@ const DetailPage = () => {
                 <Text className="text-xs text-gray-500 block mb-1">当前人员</Text>
                 <Text className="text-sm text-purple-600 font-medium">{decodedName}</Text>
                 <Text className="text-xs text-gray-500 block">
-                  {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
+                  {formatBedDisplay(decodedFloor, decodedBedNumber, position || '', decodedRoom)}
                 </Text>
               </View>
 
@@ -1086,10 +1122,7 @@ const DetailPage = () => {
                 ) : (
                   <Picker
                     mode="selector"
-                    range={getFilteredSwapBeds().map(b => {
-                      const roomText = b.room && !b.room.startsWith('floor_') ? `${b.room} - ` : ''
-                      return `${roomText}${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
-                    })}
+                    range={getFilteredSwapBeds().map(b => formatSwapBedDisplay(b))}
                     value={swapTargetBedId ? getFilteredSwapBeds().findIndex(b => b.id === swapTargetBedId) : 0}
                     onChange={(e) => {
                       const beds = getFilteredSwapBeds()
@@ -1115,14 +1148,14 @@ const DetailPage = () => {
                     <View className="flex items-center gap-1">
                       <Text className="text-xs text-gray-500">当前</Text>
                       <Text className="text-sm text-gray-600 font-medium">
-                        {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
+                        {formatBedDisplay(decodedFloor, decodedBedNumber, position || '', decodedRoom)}
                       </Text>
                     </View>
                     <ArrowRight size={14} color="#22c55e" />
                     <View className="flex items-center gap-1">
                       <Text className="text-xs text-gray-500">目标</Text>
                       <Text className="text-sm text-green-600 font-medium">
-                        {swapFloor}楼 {getSwapTargetBedText()}
+                        {getSwapTargetBedText()}
                       </Text>
                     </View>
                   </View>
