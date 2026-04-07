@@ -742,56 +742,131 @@ export class BedsService implements OnModuleInit {
   }
 
   /**
-   * 互换两个入住人员的床位（两人互换）
-   * @param checkInIdA 入住记录A的ID
-   * @param checkInIdB 入住记录B的ID
+   * 获取所有床位（用于互换，无限制）
    */
-  async swapBeds(checkInIdA: number, checkInIdB: number) {
+  async getAllBedsForSwap() {
     const client = getSupabaseClient();
 
-    // 1. 获取两条入住记录
-    const { data: checkInA, error: errorA } = await client
+    // 获取所有床位（南四巷和南二巷）
+    const { data: nansiBeds, error: nansiError } = await client
+      .from('beds')
+      .select('id, floor, bed_number, position, room, dormitory, status')
+      .eq('dormitory', 'nansi')
+      .order('floor', { ascending: true })
+      .order('bed_number', { ascending: true })
+      .order('position', { ascending: true });
+
+    const { data: nantwoBeds, error: nantwoError } = await client
+      .from('beds')
+      .select('id, floor, bed_number, position, room, dormitory, status')
+      .eq('dormitory', 'nantwo')
+      .order('floor', { ascending: true })
+      .order('bed_number', { ascending: true })
+      .order('position', { ascending: true });
+
+    if (nansiError || nantwoError) {
+      console.error('[BedsService] 获取所有床位失败:', nansiError, nantwoError);
+      throw new Error('获取所有床位失败');
+    }
+
+    // 合并两个宿舍的床位
+    const allBeds = [
+      ...(nansiBeds || []),
+      ...(nantwoBeds || []),
+    ];
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: {
+        nansiBeds: nansiBeds || [],
+        nantwoBeds: nantwoBeds || [],
+        allBeds: allBeds,
+      },
+    };
+  }
+
+  /**
+   * 互换两个入住人员的床位（两人互换）
+   * @param checkInId 入住记录ID（当前人员）
+   * @param targetBedId 目标床位ID（要交换到的床位）
+   */
+  async swapBeds(checkInId: number, targetBedId: number) {
+    const client = getSupabaseClient();
+
+    // 1. 获取当前入住记录
+    const { data: currentCheckIn, error: currentError } = await client
       .from('check_ins')
       .select('id, bed_id')
-      .eq('id', checkInIdA)
+      .eq('id', checkInId)
       .single();
 
-    const { data: checkInB, error: errorB } = await client
-      .from('check_ins')
-      .select('id, bed_id')
-      .eq('id', checkInIdB)
-      .single();
-
-    if (errorA || errorB || !checkInA || !checkInB) {
+    if (currentError || !currentCheckIn) {
       throw new Error('入住记录不存在');
     }
 
-    // 2. 互换床位
+    const currentBedId = currentCheckIn.bed_id;
+
+    // 如果目标床位就是当前床位，不允许
+    if (targetBedId === currentBedId) {
+      throw new Error('不能与自己的床位互换');
+    }
+
+    // 2. 获取目标床位的入住记录（如果有）
+    const { data: targetCheckIn, error: targetError } = await client
+      .from('check_ins')
+      .select('id, bed_id')
+      .eq('bed_id', targetBedId)
+      .single();
+
+    // 3. 互换床位
+    const now = new Date().toISOString();
+
+    // 更新当前人员的床位为目标床位
     const { error: updateErrorA } = await client
       .from('check_ins')
-      .update({ bed_id: checkInB.bed_id, updated_at: new Date().toISOString() })
-      .eq('id', checkInIdA);
+      .update({ bed_id: targetBedId, updated_at: now })
+      .eq('id', checkInId);
 
-    const { error: updateErrorB } = await client
-      .from('check_ins')
-      .update({ bed_id: checkInA.bed_id, updated_at: new Date().toISOString() })
-      .eq('id', checkInIdB);
-
-    if (updateErrorA || updateErrorB) {
-      console.error('互换床位失败:', updateErrorA, updateErrorB);
+    if (updateErrorA) {
+      console.error('更新床位失败:', updateErrorA);
       throw new Error('互换床位失败');
     }
 
-    console.log('互换床位成功:', { checkInIdA, newBedIdA: checkInB.bed_id, checkInIdB, newBedIdB: checkInA.bed_id });
+    // 如果目标床位有人，把那个人移到当前床位
+    if (targetCheckIn) {
+      const { error: updateErrorB } = await client
+        .from('check_ins')
+        .update({ bed_id: currentBedId, updated_at: now })
+        .eq('id', targetCheckIn.id);
 
+      if (updateErrorB) {
+        console.error('更新对方床位失败:', updateErrorB);
+        throw new Error('互换床位失败');
+      }
+
+      console.log('互换床位成功（目标床位有人）:', { checkInId, fromBedId: currentBedId, toBedId: targetBedId, swappedCheckInId: targetCheckIn.id });
+      return {
+        code: 200,
+        msg: '互换成功',
+        data: {
+          checkInId,
+          fromBedId: currentBedId,
+          toBedId: targetBedId,
+          swappedCheckInId: targetCheckIn.id,
+        },
+      };
+    }
+
+    console.log('互换床位成功（目标床位为空）:', { checkInId, fromBedId: currentBedId, toBedId: targetBedId });
     return {
       code: 200,
       msg: '互换成功',
       data: {
-        checkInIdA,
-        newBedIdA: checkInB.bed_id,
-        checkInIdB,
-        newBedIdB: checkInA.bed_id,
+        checkInId,
+        fromBedId: currentBedId,
+        toBedId: targetBedId,
+        swappedCheckInId: null,
       },
     };
   }

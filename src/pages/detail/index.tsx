@@ -61,19 +61,18 @@ const DetailPage = () => {
     return null
   })
   const [showStationDialog, setShowStationDialog] = useState(false)
-  const [swapPartnerCheckInId, setSwapPartnerCheckInId] = useState<string>('')
-
-  // 床位互换候选列表
-  const [swapCandidates, setSwapCandidates] = useState<Array<{
-    checkInId: number
-    name: string
-    phone: string
+  // 床位互换相关状态
+  const [swapTargetBedId, setSwapTargetBedId] = useState<number | null>(null)
+  const [swapFloor, setSwapFloor] = useState<string>('')
+  const [swapAvailableBeds, setSwapAvailableBeds] = useState<Array<{
+    id: number
     floor: number
-    bedNumber: number
+    bed_number: number
     position: string
-    positionLabel: string
+    room: string
+    isOccupied: boolean
+    occupantName?: string
   }>>([])
-  const [loadingSwapCandidates, setLoadingSwapCandidates] = useState(false)
 
   // 日期编辑相关状态
   const [dateEditType, setDateEditType] = useState<DateEditType>(null)
@@ -98,35 +97,45 @@ const DetailPage = () => {
 
   // 加载床位互换候选列表
   useEffect(() => {
-    if (showSwapDialog && checkInId) {
-      loadSwapCandidates()
+    if (showSwapDialog && bedId) {
+      loadSwapBeds()
     }
   }, [showSwapDialog])
 
-  const loadSwapCandidates = async () => {
-    if (!checkInId) return
-    setLoadingSwapCandidates(true)
+  // 加载所有床位（用于互换）
+  useEffect(() => {
+    if (showSwapDialog && bedId) {
+      loadSwapBeds()
+    }
+  }, [showSwapDialog])
+
+  const loadSwapBeds = async () => {
     try {
       const res = await Network.request({
-        url: `/api/checkin/swap-candidates/${checkInId}`
+        url: '/api/beds/all'
       })
-      console.log('互换候选列表响应:', res.data)
-      if (res.data?.code === 200) {
-        setSwapCandidates(res.data.data || [])
-        // 默认选中第一个
-        if (res.data.data && res.data.data.length > 0) {
-          setSwapPartnerCheckInId(String(res.data.data[0].checkInId))
-        } else {
-          setSwapPartnerCheckInId('')
+      console.log('互换可用床位响应:', res.data)
+      if (res.data?.code === 200 && res.data?.data) {
+        // 使用所有床位数据（南四巷和南二巷）
+        const nansiBeds = res.data.data.nansiBeds || []
+        const nantwoBeds = res.data.data.nantwoBeds || []
+        const allBeds = [...nansiBeds, ...nantwoBeds].map((b: { id: number; floor: number; bed_number: number; position: string; room: string; dormitory: string; status: string }) => ({
+          ...b,
+          isOccupied: b.status === 'occupied', // 标记是否已入住
+        }))
+        setSwapAvailableBeds(allBeds)
+        // 设置默认楼层
+        const floors = [...new Set(allBeds.map((b: { floor: number }) => b.floor))]
+        if (floors.length > 0) {
+          setSwapFloor(String(floors[0]))
         }
+        setSwapTargetBedId(null)
       } else {
-        Taro.showToast({ title: res.data?.msg || '加载候选列表失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '加载可用床位失败', icon: 'none' })
       }
     } catch (error) {
-      console.error('加载互换候选列表失败:', error)
-      Taro.showToast({ title: '加载候选列表失败', icon: 'none' })
-    } finally {
-      setLoadingSwapCandidates(false)
+      console.error('加载可用床位失败:', error)
+      Taro.showToast({ title: '加载可用床位失败', icon: 'none' })
     }
   }
 
@@ -409,13 +418,8 @@ const DetailPage = () => {
       promptLogin()
       return
     }
-    if (!checkInId || !swapPartnerCheckInId) {
-      Taro.showToast({ title: '请输入对方入住编号', icon: 'none' })
-      return
-    }
-    const partnerId = parseInt(swapPartnerCheckInId, 10)
-    if (Number.isNaN(partnerId) || partnerId === parseInt(checkInId as string, 10)) {
-      Taro.showToast({ title: '入住编号无效或不能与自己互换', icon: 'none' })
+    if (!checkInId || !swapTargetBedId) {
+      Taro.showToast({ title: '请选择目标床位', icon: 'none' })
       return
     }
     setSubmitting(true)
@@ -424,8 +428,8 @@ const DetailPage = () => {
         url: '/api/beds/swap',
         method: 'POST',
         data: {
-          checkInIdA: parseInt(checkInId as string, 10),
-          checkInIdB: partnerId
+          checkInId: parseInt(checkInId as string, 10),
+          targetBedId: swapTargetBedId
         }
       })
       if (res.data?.code === 200) {
@@ -561,6 +565,26 @@ const DetailPage = () => {
   const getDormitoryName = () => {
     if (!transferData) return ''
     return transferData.dormitory === 'nansi' ? '南四巷180号宿舍' : '南二巷24号宿舍'
+  }
+
+  // 获取互换可用的楼层列表
+  const getSwapAvailableFloors = () => {
+    return [...new Set(swapAvailableBeds.map(b => b.floor))].sort((a, b) => a - b)
+  }
+
+  // 获取筛选后的床位列表
+  const getFilteredSwapBeds = () => {
+    if (!swapAvailableBeds || !swapFloor) return []
+    return swapAvailableBeds.filter(b => b.floor.toString() === swapFloor)
+  }
+
+  // 获取选中的床位显示文本
+  const getSwapTargetBedText = () => {
+    if (!swapTargetBedId) return '请选择目标床位'
+    const bed = swapAvailableBeds.find(b => b.id === swapTargetBedId)
+    if (!bed) return '请选择目标床位'
+    const roomText = bed.room ? `${bed.room} - ` : ''
+    return `${roomText}${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
   }
 
   return (
@@ -1014,6 +1038,7 @@ const DetailPage = () => {
           </DialogHeader>
           <View className="py-4">
             <View className="space-y-4">
+              {/* 当前信息 */}
               <View className="bg-purple-50 rounded-lg p-3">
                 <Text className="text-xs text-gray-500 block mb-1">当前人员</Text>
                 <Text className="text-sm text-purple-600 font-medium">{decodedName}</Text>
@@ -1022,59 +1047,85 @@ const DetailPage = () => {
                 </Text>
               </View>
 
+              {/* 选择目标楼层 */}
               <View>
                 <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
-                  <Text>选择对方床铺</Text>
+                  <Bed size={14} color="#6b7280" />
+                  <Text>目标楼层</Text>
                 </Text>
-                {loadingSwapCandidates ? (
-                  <View className="flex items-center justify-center py-8">
-                    <Text className="text-sm text-gray-400">加载中...</Text>
+                <Picker
+                  mode="selector"
+                  range={getSwapAvailableFloors().map(f => `${f}楼`)}
+                  value={getSwapAvailableFloors().findIndex(f => f.toString() === swapFloor)}
+                  onChange={(e) => {
+                    const floors = getSwapAvailableFloors()
+                    if (floors[e.detail.value]) {
+                      setSwapFloor(floors[e.detail.value].toString())
+                      setSwapTargetBedId(null)
+                    }
+                  }}
+                >
+                  <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm items-center">
+                    <Text className="text-foreground">{swapFloor || '选择楼层'}楼</Text>
                   </View>
-                ) : swapCandidates.length === 0 ? (
-                  <View className="flex items-center justify-center py-8">
-                    <Text className="text-sm text-gray-400">暂无可互换的床位</Text>
+                </Picker>
+              </View>
+
+              {/* 选择目标床位（上下铺） */}
+              <View>
+                <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
+                  <Bed size={14} color="#6b7280" />
+                  <Text>选择床位</Text>
+                </Text>
+                {getFilteredSwapBeds().length === 0 ? (
+                  <View className="h-10 flex items-center justify-center border border-gray-200 rounded-md bg-gray-50">
+                    <Text className="text-sm text-gray-400">该楼层暂无床位</Text>
                   </View>
                 ) : (
-                  <View className="space-y-2 max-h-64 overflow-y-auto">
-                    {swapCandidates.map((candidate) => (
-                      <View
-                        key={candidate.checkInId}
-                        className={`p-3 rounded-lg border cursor-pointer ${
-                          swapPartnerCheckInId === String(candidate.checkInId)
-                            ? 'bg-purple-50 border-purple-300'
-                            : 'bg-white border-gray-200 hover:bg-gray-50'
-                        }`}
-                        onClick={() => setSwapPartnerCheckInId(String(candidate.checkInId))}
-                      >
-                        <View className="flex items-center justify-between">
-                          <View>
-                            <Text className="text-sm text-gray-800 font-medium">{candidate.name}</Text>
-                            <Text className="text-xs text-gray-500">
-                              {candidate.floor}楼 {candidate.bedNumber}号床 {candidate.positionLabel}
-                            </Text>
-                          </View>
-                          {swapPartnerCheckInId === String(candidate.checkInId) && (
-                            <View className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
-                              <Text className="text-white text-xs">✓</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    ))}
-                  </View>
+                  <Picker
+                    mode="selector"
+                    range={getFilteredSwapBeds().map(b => {
+                      const roomText = b.room ? `${b.room} - ` : ''
+                      return `${roomText}${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
+                    })}
+                    value={swapTargetBedId ? getFilteredSwapBeds().findIndex(b => b.id === swapTargetBedId) : 0}
+                    onChange={(e) => {
+                      const beds = getFilteredSwapBeds()
+                      const selectedBed = beds[e.detail.value]
+                      if (selectedBed) {
+                        setSwapTargetBedId(selectedBed.id)
+                      }
+                    }}
+                  >
+                    <View className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm items-center">
+                      <Text className={swapTargetBedId ? 'text-foreground' : 'text-muted-foreground'}>
+                        {getSwapTargetBedText()}
+                      </Text>
+                    </View>
+                  </Picker>
                 )}
               </View>
 
-              {swapPartnerCheckInId && (
+              {/* 互换提示 */}
+              {swapTargetBedId && (
                 <View className="bg-green-50 rounded-lg p-3">
-                  <Text className="text-xs text-gray-500 block mb-1">确认互换</Text>
-                  <Text className="text-sm text-gray-700">
-                    {decodedName} ({decodedFloor}楼{decodedBedNumber}号床{getPositionLabel(position)}) 
-                    {' ↔ '} 
-                    {swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.name} 
-                    ({swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.floor}楼
-                    {swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.bedNumber}号床
-                    {swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.positionLabel})
+                  <View className="flex items-center gap-2 mb-2">
+                    <View className="flex items-center gap-1">
+                      <Text className="text-xs text-gray-500">当前</Text>
+                      <Text className="text-sm text-gray-600 font-medium">
+                        {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
+                      </Text>
+                    </View>
+                    <ArrowRight size={14} color="#22c55e" />
+                    <View className="flex items-center gap-1">
+                      <Text className="text-xs text-gray-500">目标</Text>
+                      <Text className="text-sm text-green-600 font-medium">
+                        {swapFloor}楼 {getSwapTargetBedText()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-xs text-gray-500 block">
+                    互换后，当前人员到目标床位，目标床位人员到当前床位
                   </Text>
                 </View>
               )}
@@ -1085,7 +1136,7 @@ const DetailPage = () => {
             <Button
               className="bg-purple-500 text-white"
               onClick={handleSwapBed}
-              disabled={submitting || !swapPartnerCheckInId}
+              disabled={submitting || !swapTargetBedId}
             >
               {submitting ? '处理中...' : '确认互换'}
             </Button>

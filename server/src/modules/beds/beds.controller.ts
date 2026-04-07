@@ -18,9 +18,9 @@ export class BedsController {
   }
 
   @Post('swap')
-  async swapBeds(@Body() body: { checkInIdA: number; checkInIdB: number }) {
+  async swapBeds(@Body() body: { checkInId: number; targetBedId: number }) {
     console.log('互换床位请求:', body);
-    return await this.bedsService.swapBeds(body.checkInIdA, body.checkInIdB);
+    return await this.bedsService.swapBeds(body.checkInId, body.targetBedId);
   }
 
   // 南二巷宿舍接口
@@ -95,5 +95,11 @@ export class BedsMaintenanceController {
   async getTransferableBeds(@Param('bedId') bedId: string) {
     console.log('获取可转移床位请求:', bedId);
     return await this.bedsService.getTransferableBeds(parseInt(bedId, 10));
+  }
+
+  @Get('all')
+  async getAllBeds() {
+    console.log('获取所有床位请求（用于互换）');
+    return await this.bedsService.getAllBedsForSwap();
   }
 }
