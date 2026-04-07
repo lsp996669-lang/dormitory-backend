@@ -545,7 +545,8 @@ const DetailPage = () => {
     if (!targetBedId || !transferData) return '请选择目标床位'
     const bed = transferData.transferableBeds.find(b => b.id === targetBedId)
     if (!bed) return '请选择目标床位'
-    const roomText = bed.room ? `${bed.room} - ` : ''
+    // 南四巷床位不显示房间前缀
+    const roomText = bed.room && !bed.room.startsWith('floor_') ? `${bed.room} - ` : ''
     return `${roomText}${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
   }
 
@@ -583,7 +584,8 @@ const DetailPage = () => {
     if (!swapTargetBedId) return '请选择目标床位'
     const bed = swapAvailableBeds.find(b => b.id === swapTargetBedId)
     if (!bed) return '请选择目标床位'
-    const roomText = bed.room ? `${bed.room} - ` : ''
+    // 南四巷床位不显示房间前缀
+    const roomText = bed.room && !bed.room.startsWith('floor_') ? `${bed.room} - ` : ''
     return `${roomText}${bed.bed_number}号床 ${bed.position === 'upper' ? '上铺' : '下铺'}`
   }
 
@@ -821,7 +823,7 @@ const DetailPage = () => {
                     <Picker
                       mode="selector"
                       range={getFilteredBeds().map(b => {
-                        const roomText = b.room ? `${b.room} - ` : ''
+                        const roomText = b.room && !b.room.startsWith('floor_') ? `${b.room} - ` : ''
                         return `${roomText}${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
                       })}
                       value={targetBedId ? getFilteredBeds().findIndex(b => b.id === targetBedId) : 0}
@@ -1085,7 +1087,7 @@ const DetailPage = () => {
                   <Picker
                     mode="selector"
                     range={getFilteredSwapBeds().map(b => {
-                      const roomText = b.room ? `${b.room} - ` : ''
+                      const roomText = b.room && !b.room.startsWith('floor_') ? `${b.room} - ` : ''
                       return `${roomText}${b.bed_number}号床 ${b.position === 'upper' ? '上铺' : '下铺'}`
                     })}
                     value={swapTargetBedId ? getFilteredSwapBeds().findIndex(b => b.id === swapTargetBedId) : 0}
