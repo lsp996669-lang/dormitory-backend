@@ -71,6 +71,12 @@ export class CheckInController {
     return await this.checkInService.toggleFlag(body.checkInId);
   }
 
+  @Get('flagged')
+  async getFlaggedPeople() {
+    console.log('获取红名人员请求');
+    return await this.checkInService.getFlaggedPeople();
+  }
+
   @Get('swap-candidates/:checkInId')
   async getSwapCandidates(@Param('checkInId') checkInId: string) {
     console.log('获取互换候选请求:', checkInId);

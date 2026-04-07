@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -99,6 +99,24 @@ const FloorPage = () => {
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
 
+  // 红名人员状态
+  const [flaggedPeople, setFlaggedPeople] = useState<Array<{
+    checkInId: number
+    name: string
+    idCard: string
+    phone: string
+    checkInTime: string
+    dormitory: string
+    dormitoryName: string
+    floor: number
+    room: string
+    bedNumber: number
+    position: string
+    positionLabel: string
+    bedId: number
+  }>>([])
+  const [showFlaggedList, setShowFlaggedList] = useState(false)
+
   // 检查服务器状态
   const checkServerStatus = async () => {
     try {
@@ -129,11 +147,12 @@ const FloorPage = () => {
     loadNotificationCount()
     loadNanTwoFloorStats()
     loadAllResidents() // 加载所有入住人员数据
+    loadFlaggedPeople() // 加载红名人员
   })
 
   usePullDownRefresh(() => {
     console.log('[Floor] 触发下拉刷新')
-    Promise.all([loadFloorStats(), loadNotificationCount(), loadNanTwoFloorStats()])
+    Promise.all([loadFloorStats(), loadNotificationCount(), loadNanTwoFloorStats(), loadFlaggedPeople()])
       .finally(() => {
         Taro.stopPullDownRefresh()
       })
@@ -183,6 +202,21 @@ const FloorPage = () => {
       }
     } catch (error) {
       console.error('[Floor] 加载入住人员数据失败:', error)
+    }
+  }
+
+  // 加载红名人员列表
+  const loadFlaggedPeople = async () => {
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/flagged'
+      })
+      if (res.data?.code === 200 && res.data?.data) {
+        setFlaggedPeople(res.data.data)
+        console.log('[Floor] 加载红名人员:', res.data.data.length, '条')
+      }
+    } catch (error) {
+      console.error('[Floor] 加载红名人员失败:', error)
     }
   }
 
@@ -579,7 +613,83 @@ const FloorPage = () => {
         </View>
       </View>
 
-      {/* 服务离线提示 */}
+      {/* 红名人员警示区域 */}
+      {flaggedPeople.length > 0 && (
+        <Card className="overflow-hidden mb-4 border-2 border-red-300 bg-red-50">
+          <CardHeader className="pb-3">
+            <View className="flex items-center justify-between">
+              <View className="flex items-center gap-3">
+                <View className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <CircleAlert size={20} color="#dc2626" />
+                </View>
+                <View>
+                  <CardTitle className="text-lg text-red-700">重点关注人员</CardTitle>
+                  <Text className="text-xs text-red-500">
+                    {flaggedPeople.length} 人
+                  </Text>
+                </View>
+              </View>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowFlaggedList(!showFlaggedList)}
+              >
+                {showFlaggedList ? (
+                  <ChevronUp size={18} color="#dc2626" />
+                ) : (
+                  <ChevronDown size={18} color="#dc2626" />
+                )}
+              </Button>
+            </View>
+          </CardHeader>
+
+          {/* 红名人员列表 */}
+          {showFlaggedList && (
+            <CardContent className="pt-0 border-t border-red-200">
+              <View className="space-y-2 mt-3">
+                {flaggedPeople.map((person) => (
+                  <View
+                    key={person.checkInId}
+                    className="bg-white rounded-lg p-3 border border-red-200 shadow-sm cursor-pointer"
+                    onClick={() => {
+                      Taro.navigateTo({
+                        url: `/pages/detail/index?bedId=${person.bedId}&checkInId=${person.checkInId}`
+                      })
+                    }}
+                  >
+                    <View className="flex items-start justify-between">
+                      <View className="flex-1">
+                        <View className="flex items-center gap-2 mb-2">
+                          <CircleAlert size={14} color="#dc2626" />
+                          <Text className="text-sm font-bold text-red-600">{person.name}</Text>
+                          <Badge className="bg-red-500 text-white text-xs">重点关注</Badge>
+                        </View>
+                        <View className="flex items-center gap-1.5 text-xs text-gray-500 ml-1">
+                          <Building size={12} color="#9ca3af" />
+                          <Text>{person.dormitoryName} {person.floor}楼</Text>
+                          {person.room && <Text> {person.room}房</Text>}
+                          <Text> {person.bedNumber}号床 {person.positionLabel}</Text>
+                        </View>
+                        {person.phone && (
+                          <View className="flex items-center gap-1.5 text-xs text-gray-500 ml-1 mt-1">
+                            <Phone size={12} color="#9ca3af" />
+                            <Text>{person.phone}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View className="flex items-center">
+                        <ChevronDown size={16} color="#9ca3af" />
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
+      {/* 搜索功能 - 已登录时显示 */}
       {serverStatus === 'offline' && (
         <Card className="overflow-hidden mb-4 border-2 border-red-200 bg-red-50">
           <CardContent className="p-4">

@@ -538,6 +538,72 @@ export class CheckInService {
   }
 
   /**
+   * 获取所有红名标记人员
+   */
+  async getFlaggedPeople() {
+    const client = getSupabaseClient();
+
+    // 获取所有红名标记的入住记录
+    const { data: checkIns, error } = await client
+      .from('check_ins')
+      .select('id, name, id_card, phone, check_in_time, bed_id, is_flagged, created_at')
+      .eq('is_flagged', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('获取红名人员失败:', error);
+      throw new Error('获取红名人员失败');
+    }
+
+    if (!checkIns || checkIns.length === 0) {
+      return {
+        code: 200,
+        msg: '获取成功',
+        data: [],
+      };
+    }
+
+    // 获取床位信息
+    const bedIds = checkIns.map((c: any) => c.bed_id);
+    const { data: beds, error: bedsError } = await client
+      .from('beds')
+      .select('id, floor, bed_number, position, dormitory, room')
+      .in('id', bedIds);
+
+    if (bedsError) {
+      console.error('获取床位信息失败:', bedsError);
+    }
+
+    // 组装返回数据
+    const results = checkIns.map((checkIn: any) => {
+      const bed = beds?.find((b: any) => b.id === checkIn.bed_id);
+      const dormitoryName = bed?.dormitory === 'nantwo' ? '南二巷24号' : '南四巷180号';
+
+      return {
+        checkInId: checkIn.id,
+        name: checkIn.name,
+        idCard: checkIn.id_card,
+        phone: checkIn.phone,
+        checkInTime: checkIn.check_in_time,
+        dormitory: bed?.dormitory || 'nansi',
+        dormitoryName,
+        floor: bed?.floor || 0,
+        room: bed?.room || '',
+        bedNumber: bed?.bed_number || 0,
+        position: bed?.position || 'upper',
+        positionLabel: bed?.position === 'upper' ? '上铺' : '下铺',
+        bedId: checkIn.bed_id,
+      };
+    });
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: results,
+    };
+  }
+
+  /**
    * 获取可互换床位的候选人列表
    * @param checkInId 当前入住记录ID
    */
