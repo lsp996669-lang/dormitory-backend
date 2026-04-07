@@ -21,7 +21,9 @@ async function bootstrap() {
     origin: true,
     credentials: true,
   });
-  cachedApp.setGlobalPrefix('api');
+  
+  // 注意：Vercel serverless 模式下不设置 setGlobalPrefix
+  // 因为请求路径已经是 /api/xxx
   cachedApp.use(express.json({ limit: '50mb' }));
   cachedApp.use(express.urlencoded({ limit: '50mb', extended: true }));
   cachedApp.useGlobalInterceptors(new HttpStatusInterceptor());
@@ -32,6 +34,11 @@ async function bootstrap() {
 }
 
 export default async (req: any, res: any) => {
-  await bootstrap();
-  return expressInstance(req, res);
+  try {
+    await bootstrap();
+    expressInstance(req, res);
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 };
