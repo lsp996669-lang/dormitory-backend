@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Param } from '@nestjs/common';
 import { CheckInService } from './checkin.service';
 
 @Controller('checkin')
@@ -63,5 +63,11 @@ export class CheckInController {
   async toggleRider(@Body() body: { checkInId: number; value?: boolean }) {
     console.log('切换骑手状态请求:', body);
     return await this.checkInService.toggleRider(body.checkInId, body.value);
+  }
+
+  @Get('swap-candidates/:checkInId')
+  async getSwapCandidates(@Param('checkInId') checkInId: string) {
+    console.log('获取互换候选请求:', checkInId);
+    return await this.checkInService.getSwapCandidates(parseInt(checkInId, 10));
   }
 }

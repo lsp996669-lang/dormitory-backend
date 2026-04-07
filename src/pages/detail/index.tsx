@@ -1,4 +1,4 @@
-import { View, Text, Picker, Input } from '@tarojs/components'
+import { View, Text, Picker } from '@tarojs/components'
 import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -63,6 +63,18 @@ const DetailPage = () => {
   const [showStationDialog, setShowStationDialog] = useState(false)
   const [swapPartnerCheckInId, setSwapPartnerCheckInId] = useState<string>('')
 
+  // 床位互换候选列表
+  const [swapCandidates, setSwapCandidates] = useState<Array<{
+    checkInId: number
+    name: string
+    phone: string
+    floor: number
+    bedNumber: number
+    position: string
+    positionLabel: string
+  }>>([])
+  const [loadingSwapCandidates, setLoadingSwapCandidates] = useState(false)
+
   // 日期编辑相关状态
   const [dateEditType, setDateEditType] = useState<DateEditType>(null)
   const [editCheckInDate, setEditCheckInDate] = useState('')
@@ -83,6 +95,40 @@ const DetailPage = () => {
       loadTransferableBeds()
     }
   }, [showTransferDialog])
+
+  // 加载床位互换候选列表
+  useEffect(() => {
+    if (showSwapDialog && checkInId) {
+      loadSwapCandidates()
+    }
+  }, [showSwapDialog])
+
+  const loadSwapCandidates = async () => {
+    if (!checkInId) return
+    setLoadingSwapCandidates(true)
+    try {
+      const res = await Network.request({
+        url: `/api/checkin/swap-candidates/${checkInId}`
+      })
+      console.log('互换候选列表响应:', res.data)
+      if (res.data?.code === 200) {
+        setSwapCandidates(res.data.data || [])
+        // 默认选中第一个
+        if (res.data.data && res.data.data.length > 0) {
+          setSwapPartnerCheckInId(String(res.data.data[0].checkInId))
+        } else {
+          setSwapPartnerCheckInId('')
+        }
+      } else {
+        Taro.showToast({ title: res.data?.msg || '加载候选列表失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('加载互换候选列表失败:', error)
+      Taro.showToast({ title: '加载候选列表失败', icon: 'none' })
+    } finally {
+      setLoadingSwapCandidates(false)
+    }
+  }
 
   const loadTransferableBeds = async () => {
     setLoadingBeds(true)
@@ -974,36 +1020,64 @@ const DetailPage = () => {
                 <Text className="text-xs text-gray-500 block">
                   {decodedFloor}楼 {decodedBedNumber}号床 {getPositionLabel(position)}
                 </Text>
-                <Text className="text-xs text-gray-400 block mt-1">
-                  入住编号: {checkInId}
-                </Text>
-              </View>
-
-              <View className="bg-blue-50 rounded-lg p-3">
-                <Text className="text-xs text-gray-500 block mb-2">互换操作说明</Text>
-                <Text className="text-xs text-gray-600 block leading-5">
-                  请输入对方人员的入住编号，两人床位将对调。{'\\n'}
-                  入住编号可在人员详情页顶部查看。
-                </Text>
               </View>
 
               <View>
                 <Text className="text-sm text-gray-700 flex items-center gap-1 mb-2">
-                  <Text>对方入住编号</Text>
+                  <Text>选择对方床铺</Text>
                 </Text>
-                <View className="bg-gray-50 rounded-xl px-4 py-3">
-                  <Input
-                    className="w-full bg-transparent"
-                    placeholder="请输入对方入住编号"
-                    type="number"
-                    value={swapPartnerCheckInId}
-                    onInput={(e) => setSwapPartnerCheckInId(e.detail.value)}
-                  />
-                </View>
-                <Text className="text-xs text-red-500 mt-1">
-                  两人编号不能相同
-                </Text>
+                {loadingSwapCandidates ? (
+                  <View className="flex items-center justify-center py-8">
+                    <Text className="text-sm text-gray-400">加载中...</Text>
+                  </View>
+                ) : swapCandidates.length === 0 ? (
+                  <View className="flex items-center justify-center py-8">
+                    <Text className="text-sm text-gray-400">暂无可互换的床位</Text>
+                  </View>
+                ) : (
+                  <View className="space-y-2 max-h-64 overflow-y-auto">
+                    {swapCandidates.map((candidate) => (
+                      <View
+                        key={candidate.checkInId}
+                        className={`p-3 rounded-lg border cursor-pointer ${
+                          swapPartnerCheckInId === String(candidate.checkInId)
+                            ? 'bg-purple-50 border-purple-300'
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                        onClick={() => setSwapPartnerCheckInId(String(candidate.checkInId))}
+                      >
+                        <View className="flex items-center justify-between">
+                          <View>
+                            <Text className="text-sm text-gray-800 font-medium">{candidate.name}</Text>
+                            <Text className="text-xs text-gray-500">
+                              {candidate.floor}楼 {candidate.bedNumber}号床 {candidate.positionLabel}
+                            </Text>
+                          </View>
+                          {swapPartnerCheckInId === String(candidate.checkInId) && (
+                            <View className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                              <Text className="text-white text-xs">✓</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
+
+              {swapPartnerCheckInId && (
+                <View className="bg-green-50 rounded-lg p-3">
+                  <Text className="text-xs text-gray-500 block mb-1">确认互换</Text>
+                  <Text className="text-sm text-gray-700">
+                    {decodedName} ({decodedFloor}楼{decodedBedNumber}号床{getPositionLabel(position)}) 
+                    {' ↔ '} 
+                    {swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.name} 
+                    ({swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.floor}楼
+                    {swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.bedNumber}号床
+                    {swapCandidates.find(c => String(c.checkInId) === swapPartnerCheckInId)?.positionLabel})
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
           <DialogFooter>

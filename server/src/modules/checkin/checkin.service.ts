@@ -500,4 +500,94 @@ export class CheckInService {
       data: { isRider: newValue },
     };
   }
+
+  /**
+   * 获取可互换床位的候选人列表
+   * @param checkInId 当前入住记录ID
+   */
+  async getSwapCandidates(checkInId: number) {
+    const client = getSupabaseClient();
+
+    // 1. 获取当前入住记录及其床位信息
+    const { data: currentCheckIn, error: currentError } = await client
+      .from('check_ins')
+      .select('id, bed_id')
+      .eq('id', checkInId)
+      .single();
+
+    if (currentError || !currentCheckIn) {
+      throw new Error('入住记录不存在');
+    }
+
+    // 2. 获取当前床位信息（包含宿舍信息）
+    const { data: currentBed, error: bedError } = await client
+      .from('beds')
+      .select('id, dormitory, floor, bed_number, position')
+      .eq('id', currentCheckIn.bed_id)
+      .single();
+
+    if (bedError || !currentBed) {
+      throw new Error('床位信息不存在');
+    }
+
+    // 3. 获取同一宿舍的所有已入住人员（排除自己）
+    const { data: allCheckIns, error: allError } = await client
+      .from('check_ins')
+      .select('id, bed_id, name, phone')
+      .neq('id', checkInId);
+
+    if (allError) {
+      console.error('获取入住记录失败:', allError);
+      throw new Error('获取候选列表失败');
+    }
+
+    // 4. 获取这些人的床位信息
+    const bedIds = allCheckIns?.map(c => c.bed_id) || [];
+    if (bedIds.length === 0) {
+      return {
+        code: 200,
+        msg: '获取成功',
+        data: [],
+      };
+    }
+
+    const { data: beds, error: bedsError } = await client
+      .from('beds')
+      .select('id, dormitory, floor, bed_number, position')
+      .in('id', bedIds)
+      .eq('dormitory', currentBed.dormitory);
+
+    if (bedsError) {
+      console.error('获取床位信息失败:', bedsError);
+      throw new Error('获取候选列表失败');
+    }
+
+    // 5. 组装候选列表
+    const candidates = (allCheckIns || []).map(checkIn => {
+      const bed = beds?.find(b => b.id === checkIn.bed_id);
+      if (!bed) return null;
+
+      return {
+        checkInId: checkIn.id,
+        name: checkIn.name,
+        phone: checkIn.phone,
+        floor: bed.floor,
+        bedNumber: bed.bed_number,
+        position: bed.position,
+        positionLabel: bed.position === 'upper' ? '上铺' : '下铺',
+      };
+    }).filter(Boolean);
+
+    // 按楼层和床位号排序
+    candidates.sort((a: any, b: any) => {
+      if (a.floor !== b.floor) return a.floor - b.floor;
+      return a.bedNumber - b.bedNumber;
+    });
+
+    return {
+      code: 200,
+      msg: '获取成功',
+      data: candidates,
+    };
+  }
 }
