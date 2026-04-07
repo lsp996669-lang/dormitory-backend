@@ -52,6 +52,8 @@ interface BedInfo {
     idCard: string
     phone: string
     checkInTime: string
+    isStationMarked?: boolean
+    isRider?: boolean
   }
 }
 
@@ -141,7 +143,9 @@ const CheckInPage = () => {
             name: bed.checkIn.name,
             idCard: bed.checkIn.id_card,
             phone: bed.checkIn.phone,
-            checkInTime: bed.checkIn.check_in_time
+            checkInTime: bed.checkIn.check_in_time,
+            isStationMarked: bed.checkIn.is_station_marked ?? false,
+            isRider: bed.checkIn.is_rider ?? false,
           } : undefined
         }))
         console.log(`[CheckIn] 格式化后的床位数据: ${formattedBeds.length} 条`)
@@ -268,7 +272,7 @@ const CheckInPage = () => {
       // 已入住的床位，点击名字查看详情（不需要登录）
       if (bed.checkIn) {
         Taro.navigateTo({
-          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}&dormitory=${bed.dormitory || 'nansi'}&room=${bed.room || ''}`
+          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}&dormitory=${bed.dormitory || 'nansi'}&room=${bed.room || ''}&isStationMarked=${bed.checkIn.isStationMarked ?? false}&isRider=${bed.checkIn.isRider ?? false}`
         })
       }
     }
@@ -422,7 +426,17 @@ const CheckInPage = () => {
                               )}
                               {upperBed?.status === 'occupied' && upperBed.checkIn && (
                                 <View className="mt-1">
-                                  <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                                  <View className="flex items-center gap-1">
+                                    <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                                    {/* 站点标注指示器 */}
+                                    {upperBed.checkIn.isRider ? (
+                                      <View className="w-2 h-2 rounded-full bg-green-500" />
+                                    ) : upperBed.checkIn.isStationMarked ? (
+                                      <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
+                                    ) : (
+                                      <View className="w-2 h-2 rounded-full bg-red-500" />
+                                    )}
+                                  </View>
                                   <Text className="text-xs text-gray-500 block">
                                     入住: {formatDate(upperBed.checkIn.checkInTime)}
                                   </Text>
@@ -466,7 +480,17 @@ const CheckInPage = () => {
                               )}
                               {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                                 <View className="mt-1">
-                                  <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                                  <View className="flex items-center gap-1">
+                                    <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                                    {/* 站点标注指示器 */}
+                                    {lowerBed.checkIn.isRider ? (
+                                      <View className="w-2 h-2 rounded-full bg-green-500" />
+                                    ) : lowerBed.checkIn.isStationMarked ? (
+                                      <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
+                                    ) : (
+                                      <View className="w-2 h-2 rounded-full bg-red-500" />
+                                    )}
+                                  </View>
                                   <Text className="text-xs text-gray-500 block">
                                     入住: {formatDate(lowerBed.checkIn.checkInTime)}
                                   </Text>
@@ -534,7 +558,17 @@ const CheckInPage = () => {
                       )}
                       {upperBed?.status === 'occupied' && upperBed.checkIn && (
                         <View className="mt-1">
-                          <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                          <View className="flex items-center gap-1">
+                            <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                            {/* 站点标注指示器 */}
+                            {upperBed.checkIn.isRider ? (
+                              <View className="w-2 h-2 rounded-full bg-green-500" />
+                            ) : upperBed.checkIn.isStationMarked ? (
+                              <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
+                            ) : (
+                              <View className="w-2 h-2 rounded-full bg-red-500" />
+                            )}
+                          </View>
                           <Text className="text-xs text-gray-500 block">
                             入住: {formatDate(upperBed.checkIn.checkInTime)}
                           </Text>
@@ -578,7 +612,17 @@ const CheckInPage = () => {
                       )}
                       {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                         <View className="mt-1">
-                          <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                          <View className="flex items-center gap-1">
+                            <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                            {/* 站点标注指示器 */}
+                            {lowerBed.checkIn.isRider ? (
+                              <View className="w-2 h-2 rounded-full bg-green-500" />
+                            ) : lowerBed.checkIn.isStationMarked ? (
+                              <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
+                            ) : (
+                              <View className="w-2 h-2 rounded-full bg-red-500" />
+                            )}
+                          </View>
                           <Text className="text-xs text-gray-500 block">
                             入住: {formatDate(lowerBed.checkIn.checkInTime)}
                           </Text>
