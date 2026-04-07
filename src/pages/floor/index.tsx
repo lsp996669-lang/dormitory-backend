@@ -4,13 +4,14 @@ import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -646,31 +647,33 @@ const FloorPage = () => {
                 {notifications.map((notification) => (
                   <View
                     key={notification.id}
-                    className="bg-gray-50 rounded-lg p-3 border border-gray-100"
+                    className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-3 border border-gray-100 shadow-sm"
                   >
                     <View className="flex items-start justify-between">
                       <View className="flex-1">
-                        <View className="flex items-center gap-1 mb-1">
-                          <Text className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-600 font-medium">
-                            {notification.dormitory === 'nantwo' ? '南二巷' : '南四巷'}
-                          </Text>
-                          <User size={12} color="#6b7280" />
-                          <Text className="text-sm font-medium text-gray-800">{notification.name}</Text>
+                        <View className="flex items-center gap-2 mb-2">
+                          <Badge className={`text-xs ${notification.dormitory === 'nantwo' ? 'bg-purple-500' : 'bg-blue-500'} text-white`}>
+                            <Text className="text-white text-xs">
+                              {notification.dormitory === 'nantwo' ? '南二巷' : '南四巷'}
+                            </Text>
+                          </Badge>
+                          <User size={13} color="#4b5563" />
+                          <Text className="text-sm font-semibold text-gray-800">{notification.name}</Text>
                         </View>
-                        <View className="flex items-center gap-1 text-xs text-gray-500">
+                        <View className="flex items-center gap-1.5 text-xs text-gray-500 ml-1">
                           <Building size={12} color="#9ca3af" />
                           <Text>{notification.floor}楼 {notification.bed_number}号床 {getPositionLabel(notification.position)}</Text>
                         </View>
                       </View>
-                      <View className="flex items-center gap-1 text-xs text-gray-400">
-                        <Calendar size={10} color="#9ca3af" />
+                      <View className="flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                        <Clock size={10} color="#9ca3af" />
                         <Text>{formatTime(notification.created_at)}</Text>
                       </View>
                     </View>
                   </View>
                 ))}
                 <Button
-                  className="w-full mt-3 bg-gray-100 hover:bg-gray-200"
+                  className="w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-600"
                   onClick={handleClearNotifications}
                 >
                   <Trash2 size={14} color="#6b7280" className="mr-1" />

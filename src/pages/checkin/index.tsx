@@ -387,18 +387,18 @@ const CheckInPage = () => {
                       const lowerBed = roomBeds.find(b => b.bedNumber === bedNum && b.position === 'lower')
 
                       return (
-                        <View key={bedNum} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                          <View className="bg-gray-100 px-3 py-1 border-b border-gray-200">
-                            <Text className="text-xs font-medium text-gray-600">{bedNum}号床</Text>
+                        <View key={bedNum} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                          <View className="bg-gradient-to-r from-gray-100 to-gray-50 px-3 py-2 border-b border-gray-200">
+                            <Text className="text-xs font-semibold text-gray-600">{bedNum}号床</Text>
                           </View>
                           <View className="p-2 space-y-2">
                             {/* 上铺 */}
                             <View
-                              className={`rounded p-2 cursor-pointer ${
+                              className={`rounded-lg p-2 cursor-pointer transition-all ${
                                 upperBed?.status === 'occupied'
-                                  ? 'bg-green-50 border border-green-200'
+                                  ? 'bg-green-50 border border-green-200 shadow-sm'
                                   : upperBed?.status === 'maintenance'
-                                  ? 'bg-orange-50 border border-orange-200'
+                                  ? 'bg-orange-50 border border-orange-200 shadow-sm'
                                   : 'bg-white border border-gray-200'
                               }`}
                               onClick={() => upperBed && handleBedClick(upperBed)}
@@ -428,18 +428,18 @@ const CheckInPage = () => {
                               )}
                               {upperBed?.status === 'occupied' && upperBed.checkIn && (
                                 <View className="mt-1">
-                                  <View className="flex items-center gap-2">
-                                    <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                                  <View className="flex items-center gap-2 flex-wrap">
+                                    <Text className="text-xs text-blue-600 font-semibold">{upperBed.checkIn.name}</Text>
                                     {/* 站点标注标签 */}
                                     {upperBed.checkIn.stationName && (
-                                      <View className={`px-1 py-1 rounded text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
-                                        <Text className="text-xs text-white">
+                                      <Badge className={`text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white`}>
+                                        <Text className="text-white text-xs">
                                           {upperBed.checkIn.stationName === 'exhibition' ? '会展' : upperBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
                                         </Text>
-                                      </View>
+                                      </Badge>
                                     )}
                                   </View>
-                                  <Text className="text-xs text-gray-500 block">
+                                  <Text className="text-xs text-gray-500 block mt-1">
                                     入住: {formatDate(upperBed.checkIn.checkInTime)}
                                   </Text>
                                 </View>
@@ -448,11 +448,11 @@ const CheckInPage = () => {
 
                             {/* 下铺 */}
                             <View
-                              className={`rounded p-2 cursor-pointer ${
+                              className={`rounded-lg p-2 cursor-pointer transition-all ${
                                 lowerBed?.status === 'occupied'
-                                  ? 'bg-green-50 border border-green-200'
+                                  ? 'bg-green-50 border border-green-200 shadow-sm'
                                   : lowerBed?.status === 'maintenance'
-                                  ? 'bg-orange-50 border border-orange-200'
+                                  ? 'bg-orange-50 border border-orange-200 shadow-sm'
                                   : 'bg-white border border-gray-200'
                               }`}
                               onClick={() => lowerBed && handleBedClick(lowerBed)}
@@ -482,18 +482,18 @@ const CheckInPage = () => {
                               )}
                               {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                                 <View className="mt-1">
-                                  <View className="flex items-center gap-2">
-                                    <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                                  <View className="flex items-center gap-2 flex-wrap">
+                                    <Text className="text-xs text-blue-600 font-semibold">{lowerBed.checkIn.name}</Text>
                                     {/* 站点标注标签 */}
                                     {lowerBed.checkIn.stationName && (
-                                      <View className={`px-1 py-1 rounded text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
-                                        <Text className="text-xs text-white">
+                                      <Badge className={`text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white`}>
+                                        <Text className="text-white text-xs">
                                           {lowerBed.checkIn.stationName === 'exhibition' ? '会展' : lowerBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
                                         </Text>
-                                      </View>
+                                      </Badge>
                                     )}
                                   </View>
-                                  <Text className="text-xs text-gray-500 block">
+                                  <Text className="text-xs text-gray-500 block mt-1">
                                     入住: {formatDate(lowerBed.checkIn.checkInTime)}
                                   </Text>
                                 </View>
@@ -528,15 +528,15 @@ const CheckInPage = () => {
                     <View
                       className={`rounded p-2 cursor-pointer ${
                         upperBed?.status === 'occupied'
-                          ? 'bg-green-50 border border-green-200'
+                          ? 'bg-gradient-to-br from-green-50 to-green-100 border border-green-200 shadow-sm'
                           : upperBed?.status === 'maintenance'
-                          ? 'bg-orange-50 border border-orange-200'
+                          ? 'bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 shadow-sm'
                           : 'bg-gray-50 border border-gray-200'
                       }`}
                       onClick={() => upperBed && handleBedClick(upperBed)}
                     >
                       <View className="flex items-center justify-between">
-                        <View className="flex items-center gap-1">
+                        <View className="flex items-center gap-2">
                           <Bed size={14} color={upperBed?.status === 'occupied' ? '#22c55e' : upperBed?.status === 'maintenance' ? '#f97316' : '#9ca3af'} />
                           <Text className={`text-xs font-medium ${
                             upperBed?.status === 'occupied' ? 'text-green-700' : upperBed?.status === 'maintenance' ? 'text-orange-700' : 'text-gray-500'
@@ -546,32 +546,32 @@ const CheckInPage = () => {
                           </Text>
                         </View>
                         {upperBed?.status === 'occupied' && (
-                          <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
+                          <Badge className="bg-green-500 text-white text-xs px-2">已入住</Badge>
                         )}
                         {upperBed?.status === 'maintenance' && (
-                          <Badge className="bg-orange-500 text-white text-xs">维修中</Badge>
+                          <Badge className="bg-orange-500 text-white text-xs px-2">维修中</Badge>
                         )}
                       </View>
                       {upperBed?.status === 'empty' && (
-                        <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                        <Text className="text-xs text-gray-400 block mt-2">点击登记</Text>
                       )}
                       {upperBed?.status === 'maintenance' && (
-                        <Text className="text-xs text-orange-500 block mt-1">维修中，暂停入住</Text>
+                        <Text className="text-xs text-orange-500 block mt-2">维修中，暂停入住</Text>
                       )}
                       {upperBed?.status === 'occupied' && upperBed.checkIn && (
-                        <View className="mt-1">
-                          <View className="flex items-center gap-2">
-                            <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
+                        <View className="mt-2">
+                          <View className="flex items-center gap-2 flex-wrap">
+                            <Text className="text-xs text-blue-600 font-semibold">{upperBed.checkIn.name}</Text>
                             {/* 站点标注标签 */}
                             {upperBed.checkIn.stationName && (
-                              <View className={`px-1 py-1 rounded text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
-                                <Text className="text-xs text-white">
+                              <Badge className={`text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white px-2`}>
+                                <Text className="text-white text-xs">
                                   {upperBed.checkIn.stationName === 'exhibition' ? '会展' : upperBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
                                 </Text>
-                              </View>
+                              </Badge>
                             )}
                           </View>
-                          <Text className="text-xs text-gray-500 block">
+                          <Text className="text-xs text-gray-400 block mt-1">
                             入住: {formatDate(upperBed.checkIn.checkInTime)}
                           </Text>
                         </View>
@@ -580,17 +580,17 @@ const CheckInPage = () => {
 
                     {/* 下铺 */}
                     <View
-                      className={`rounded p-2 cursor-pointer ${
+                      className={`rounded cursor-pointer p-3 ${
                         lowerBed?.status === 'occupied'
-                          ? 'bg-green-50 border border-green-200'
+                          ? 'bg-gradient-to-br from-green-50 to-green-100 border border-green-200 shadow-sm'
                           : lowerBed?.status === 'maintenance'
-                          ? 'bg-orange-50 border border-orange-200'
+                          ? 'bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 shadow-sm'
                           : 'bg-gray-50 border border-gray-200'
                       }`}
                       onClick={() => lowerBed && handleBedClick(lowerBed)}
                     >
                       <View className="flex items-center justify-between">
-                        <View className="flex items-center gap-1">
+                        <View className="flex items-center gap-2">
                           <Bed size={14} color={lowerBed?.status === 'occupied' ? '#22c55e' : lowerBed?.status === 'maintenance' ? '#f97316' : '#9ca3af'} />
                           <Text className={`text-xs font-medium ${
                             lowerBed?.status === 'occupied' ? 'text-green-700' : lowerBed?.status === 'maintenance' ? 'text-orange-700' : 'text-gray-500'
@@ -600,32 +600,32 @@ const CheckInPage = () => {
                           </Text>
                         </View>
                         {lowerBed?.status === 'occupied' && (
-                          <Badge className="bg-green-500 text-white text-xs">已入住</Badge>
+                          <Badge className="bg-green-500 text-white text-xs px-2">已入住</Badge>
                         )}
                         {lowerBed?.status === 'maintenance' && (
-                          <Badge className="bg-orange-500 text-white text-xs">维修中</Badge>
+                          <Badge className="bg-orange-500 text-white text-xs px-2">维修中</Badge>
                         )}
                       </View>
                       {lowerBed?.status === 'empty' && (
-                        <Text className="text-xs text-gray-400 block mt-1">点击登记</Text>
+                        <Text className="text-xs text-gray-400 block mt-2">点击登记</Text>
                       )}
                       {lowerBed?.status === 'maintenance' && (
-                        <Text className="text-xs text-orange-500 block mt-1">维修中，暂停入住</Text>
+                        <Text className="text-xs text-orange-500 block mt-2">维修中，暂停入住</Text>
                       )}
                       {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
-                        <View className="mt-1">
-                          <View className="flex items-center gap-2">
-                            <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
+                        <View className="mt-2">
+                          <View className="flex items-center gap-2 flex-wrap">
+                            <Text className="text-xs text-blue-600 font-semibold">{lowerBed.checkIn.name}</Text>
                             {/* 站点标注标签 */}
                             {lowerBed.checkIn.stationName && (
-                              <View className={`px-1 py-1 rounded text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
-                                <Text className="text-xs text-white">
+                              <Badge className={`text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white px-2`}>
+                                <Text className="text-white text-xs">
                                   {lowerBed.checkIn.stationName === 'exhibition' ? '会展' : lowerBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
                                 </Text>
-                              </View>
+                              </Badge>
                             )}
                           </View>
-                          <Text className="text-xs text-gray-500 block">
+                          <Text className="text-xs text-gray-400 block mt-1">
                             入住: {formatDate(lowerBed.checkIn.checkInTime)}
                           </Text>
                         </View>
