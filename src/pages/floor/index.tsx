@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -217,6 +217,29 @@ const FloorPage = () => {
       }
     } catch (error) {
       console.error('[Floor] 加载红名人员失败:', error)
+    }
+  }
+
+  // 取消红名标记
+  const handleUnflag = async (checkInId: number, e: any) => {
+    e.stopPropagation()
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-flag',
+        method: 'POST',
+        data: { checkInId }
+      })
+      if (res.data?.code === 200) {
+        Taro.showToast({ title: '已取消标记', icon: 'success' })
+        // 刷新红名人员列表
+        loadFlaggedPeople()
+        // 刷新楼层统计（可能有变化）
+        loadFloorStats()
+        loadNanTwoFloorStats()
+      }
+    } catch (error) {
+      console.error('[Floor] 取消红名标记失败:', error)
+      Taro.showToast({ title: '取消标记失败', icon: 'none' })
     }
   }
 
@@ -650,15 +673,17 @@ const FloorPage = () => {
                 {flaggedPeople.map((person) => (
                   <View
                     key={person.checkInId}
-                    className="bg-white rounded-lg p-3 border border-red-200 shadow-sm cursor-pointer"
-                    onClick={() => {
-                      Taro.navigateTo({
-                        url: `/pages/detail/index?bedId=${person.bedId}&checkInId=${person.checkInId}`
-                      })
-                    }}
+                    className="bg-white rounded-lg p-3 border border-red-200 shadow-sm"
                   >
                     <View className="flex items-start justify-between">
-                      <View className="flex-1">
+                      <View 
+                        className="flex-1" 
+                        onClick={() => {
+                          Taro.navigateTo({
+                            url: `/pages/detail/index?bedId=${person.bedId}&checkInId=${person.checkInId}`
+                          })
+                        }}
+                      >
                         <View className="flex items-center gap-2 mb-2">
                           <CircleAlert size={14} color="#dc2626" />
                           <Text className="text-sm font-bold text-red-600">{person.name}</Text>
@@ -677,8 +702,15 @@ const FloorPage = () => {
                           </View>
                         )}
                       </View>
-                      <View className="flex items-center">
-                        <ChevronDown size={16} color="#9ca3af" />
+                      <View className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e: any) => handleUnflag(person.checkInId, e)}
+                          className="text-gray-500 hover:text-red-500 p-1 min-w-0 h-auto"
+                        >
+                          <X size={16} color="#6b7280" />
+                        </Button>
                       </View>
                     </View>
                   </View>
