@@ -54,9 +54,9 @@ export class CheckInController {
   }
 
   @Post('toggle-station')
-  async toggleStationMarked(@Body() body: { checkInId: number; value?: boolean }) {
-    console.log('切换站点标注请求:', body);
-    return await this.checkInService.toggleStationMarked(body.checkInId, body.value);
+  async toggleStationMarked(@Body() body: { checkInId: number; stationName: string | null }) {
+    console.log('设置站点标注请求:', body);
+    return await this.checkInService.setStationMarked(body.checkInId, body.stationName);
   }
 
   @Post('toggle-rider')

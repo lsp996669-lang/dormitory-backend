@@ -55,8 +55,12 @@ const DetailPage = () => {
   })
 
   // 站点标注相关状态
-  const [isStationMarked, setIsStationMarked] = useState(initialStationMarked === 'true')
-  const [isRider, setIsRider] = useState(initialIsRider === 'true')
+  const [stationName, setStationName] = useState<string | null>(() => {
+    if (initialIsRider === 'true') return 'rider'
+    if (initialStationMarked === 'true') return 'exhibition' // 默认会展中心站
+    return null
+  })
+  const [showStationDialog, setShowStationDialog] = useState(false)
   const [swapPartnerCheckInId, setSwapPartnerCheckInId] = useState<string>('')
 
   // 日期编辑相关状态
@@ -290,8 +294,17 @@ const DetailPage = () => {
     })
   }
 
-  // 切换站点标注状态
-  const handleToggleStationMarker = async () => {
+  // 点击站点标注按钮
+  const handleStationClick = () => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    setShowStationDialog(true)
+  }
+
+  // 选择站点
+  const handleSelectStation = async (station: string | null) => {
     if (!checkLogin()) {
       promptLogin()
       return
@@ -302,48 +315,46 @@ const DetailPage = () => {
       const res = await Network.request({
         url: '/api/checkin/toggle-station',
         method: 'POST',
-        data: { checkInId: parseInt(checkInId as string, 10) }
+        data: {
+          checkInId: parseInt(checkInId as string, 10),
+          stationName: station
+        }
       })
       if (res.data?.code === 200) {
-        setIsStationMarked(!isStationMarked)
-        Taro.showToast({ title: !isStationMarked ? '已标注' : '已取消标注', icon: 'success' })
+        setStationName(station)
+        setShowStationDialog(false)
+        const stationLabels: Record<string, string> = {
+          'exhibition': '会展中心站',
+          'wuyue': '吾悦广场站',
+          'rider': '众包骑手'
+        }
+        Taro.showToast({ title: station ? `已标记${stationLabels[station]}` : '已取消标注', icon: 'success' })
       } else {
         Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
       }
     } catch (error) {
-      console.error('切换站点标注失败:', error)
+      console.error('设置站点标注失败:', error)
       Taro.showToast({ title: '操作失败', icon: 'none' })
     } finally {
       setSubmitting(false)
     }
   }
 
-  // 切换骑手状态
-  const handleToggleRider = async () => {
-    if (!checkLogin()) {
-      promptLogin()
-      return
+  // 获取站点标签
+  const getStationLabel = (station: string | null) => {
+    const labels: Record<string, string> = {
+      'exhibition': '会展中心站',
+      'wuyue': '吾悦广场站',
+      'rider': '众包骑手'
     }
-    if (!checkInId) return
-    setSubmitting(true)
-    try {
-      const res = await Network.request({
-        url: '/api/checkin/toggle-rider',
-        method: 'POST',
-        data: { checkInId: parseInt(checkInId as string, 10) }
-      })
-      if (res.data?.code === 200) {
-        setIsRider(!isRider)
-        Taro.showToast({ title: !isRider ? '已标记骑手' : '已取消骑手', icon: 'success' })
-      } else {
-        Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
-      }
-    } catch (error) {
-      console.error('切换骑手状态失败:', error)
-      Taro.showToast({ title: '操作失败', icon: 'none' })
-    } finally {
-      setSubmitting(false)
-    }
+    return station ? labels[station] || station : '设置站点'
+  }
+
+  // 获取站点按钮样式
+  const getStationButtonStyle = () => {
+    if (!stationName) return 'bg-gray-100 text-gray-600 border-gray-200'
+    if (stationName === 'rider') return 'bg-green-500 text-white border-green-500'
+    return 'bg-blue-500 text-white border-blue-500'
   }
 
   // 执行床位互换
@@ -560,19 +571,14 @@ const DetailPage = () => {
               <MapPin size={20} color="#6b7280" />
               <View className="flex-1">
                 <Text className="text-xs text-gray-500 block">站点标注</Text>
-                <View className="flex items-center gap-2 mt-1">
-                  <View
-                    className={`px-2 py-1 rounded text-xs font-medium cursor-pointer border ${isStationMarked ? 'bg-white text-gray-700 border-gray-300' : 'bg-red-500 text-white border-red-500'}`}
-                    onClick={handleToggleStationMarker}
+                <View className="mt-1">
+                  <Button
+                    size="sm"
+                    className={`px-3 py-1 rounded text-xs font-medium border ${getStationButtonStyle()}`}
+                    onClick={handleStationClick}
                   >
-                    {isStationMarked ? '已标注' : '未标注'}
-                  </View>
-                  <View
-                    className={`px-2 py-1 rounded text-xs font-medium cursor-pointer border ${isRider ? 'bg-green-500 text-white border-green-500' : 'bg-gray-200 text-gray-500 border-gray-200'}`}
-                    onClick={handleToggleRider}
-                  >
-                    {isRider ? '众包骑手' : '非骑手'}
-                  </View>
+                    <Text>{getStationLabel(stationName)}</Text>
+                  </Button>
                 </View>
               </View>
             </View>
@@ -1009,6 +1015,59 @@ const DetailPage = () => {
             >
               {submitting ? '处理中...' : '确认互换'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 站点选择对话框 */}
+      <Dialog open={showStationDialog} onOpenChange={setShowStationDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>选择站点标注</DialogTitle>
+          </DialogHeader>
+          <View className="py-4 space-y-3">
+            <Button
+              className={`w-full py-3 rounded-lg border ${stationName === 'exhibition' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              onClick={() => handleSelectStation('exhibition')}
+              disabled={submitting}
+            >
+              <View className="flex items-center justify-center gap-2">
+                <MapPin size={16} color={stationName === 'exhibition' ? '#fff' : '#6b7280'} />
+                <Text className={stationName === 'exhibition' ? 'text-white' : 'text-gray-700'}>会展中心站</Text>
+              </View>
+            </Button>
+            <Button
+              className={`w-full py-3 rounded-lg border ${stationName === 'wuyue' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              onClick={() => handleSelectStation('wuyue')}
+              disabled={submitting}
+            >
+              <View className="flex items-center justify-center gap-2">
+                <MapPin size={16} color={stationName === 'wuyue' ? '#fff' : '#6b7280'} />
+                <Text className={stationName === 'wuyue' ? 'text-white' : 'text-gray-700'}>吾悦广场站</Text>
+              </View>
+            </Button>
+            <Button
+              className={`w-full py-3 rounded-lg border ${stationName === 'rider' ? 'bg-green-500 text-white border-green-500' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+              onClick={() => handleSelectStation('rider')}
+              disabled={submitting}
+            >
+              <View className="flex items-center justify-center gap-2">
+                <MapPin size={16} color={stationName === 'rider' ? '#fff' : '#6b7280'} />
+                <Text className={stationName === 'rider' ? 'text-white' : 'text-gray-700'}>众包骑手</Text>
+              </View>
+            </Button>
+            {stationName && (
+              <Button
+                className="w-full py-3 rounded-lg border bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"
+                onClick={() => handleSelectStation(null)}
+                disabled={submitting}
+              >
+                <Text className="text-gray-500">取消标注</Text>
+              </Button>
+            )}
+          </View>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStationDialog(false)}>关闭</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

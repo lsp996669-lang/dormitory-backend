@@ -73,6 +73,7 @@ const FloorPage = () => {
     bedId: number
     isStationMarked?: boolean
     isRider?: boolean
+    stationName?: string | null
   }>>([])
   const [searchResults, setSearchResults] = useState<Array<{
     checkInId: number
@@ -90,6 +91,7 @@ const FloorPage = () => {
     bedId: number
     isStationMarked?: boolean
     isRider?: boolean
+    stationName?: string | null
   }>>([])
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
@@ -389,7 +391,7 @@ const FloorPage = () => {
   const handleSearchResultClick = (result: typeof searchResults[0]) => {
     setShowSearchResults(false)
     Taro.navigateTo({
-      url: `/pages/detail/index?name=${encodeURIComponent(result.name)}&idCard=${encodeURIComponent(result.idCard)}&phone=${encodeURIComponent(result.phone)}&checkInTime=${encodeURIComponent(result.checkInTime)}&floor=${result.floor}&bedNumber=${result.bedNumber}&position=${result.position}&checkInId=${result.checkInId}&bedId=${result.bedId}&dormitory=${result.dormitory}&room=${result.room || ''}&isStationMarked=${result.isStationMarked ?? false}&isRider=${result.isRider ?? false}`
+      url: `/pages/detail/index?name=${encodeURIComponent(result.name)}&idCard=${encodeURIComponent(result.idCard)}&phone=${encodeURIComponent(result.phone)}&checkInTime=${encodeURIComponent(result.checkInTime)}&floor=${result.floor}&bedNumber=${result.bedNumber}&position=${result.position}&checkInId=${result.checkInId}&bedId=${result.bedId}&dormitory=${result.dormitory}&room=${result.room || ''}&isStationMarked=${result.isStationMarked ?? false}&isRider=${result.isRider ?? false}&stationName=${result.stationName || ''}`
     })
   }
 

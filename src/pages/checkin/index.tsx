@@ -54,6 +54,7 @@ interface BedInfo {
     checkInTime: string
     isStationMarked?: boolean
     isRider?: boolean
+    stationName?: string | null
   }
 }
 
@@ -146,6 +147,7 @@ const CheckInPage = () => {
             checkInTime: bed.checkIn.check_in_time,
             isStationMarked: bed.checkIn.is_station_marked ?? false,
             isRider: bed.checkIn.is_rider ?? false,
+            stationName: bed.checkIn.station_name ?? null,
           } : undefined
         }))
         console.log(`[CheckIn] 格式化后的床位数据: ${formattedBeds.length} 条`)
@@ -426,15 +428,15 @@ const CheckInPage = () => {
                               )}
                               {upperBed?.status === 'occupied' && upperBed.checkIn && (
                                 <View className="mt-1">
-                                  <View className="flex items-center gap-1">
+                                  <View className="flex items-center gap-2">
                                     <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
-                                    {/* 站点标注指示器 */}
-                                    {upperBed.checkIn.isRider ? (
-                                      <View className="w-2 h-2 rounded-full bg-green-500" />
-                                    ) : upperBed.checkIn.isStationMarked ? (
-                                      <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
-                                    ) : (
-                                      <View className="w-2 h-2 rounded-full bg-red-500" />
+                                    {/* 站点标注标签 */}
+                                    {upperBed.checkIn.stationName && (
+                                      <View className={`px-1 py-1 rounded text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                        <Text className="text-xs text-white">
+                                          {upperBed.checkIn.stationName === 'exhibition' ? '会展' : upperBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
+                                        </Text>
+                                      </View>
                                     )}
                                   </View>
                                   <Text className="text-xs text-gray-500 block">
@@ -480,15 +482,15 @@ const CheckInPage = () => {
                               )}
                               {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                                 <View className="mt-1">
-                                  <View className="flex items-center gap-1">
+                                  <View className="flex items-center gap-2">
                                     <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
-                                    {/* 站点标注指示器 */}
-                                    {lowerBed.checkIn.isRider ? (
-                                      <View className="w-2 h-2 rounded-full bg-green-500" />
-                                    ) : lowerBed.checkIn.isStationMarked ? (
-                                      <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
-                                    ) : (
-                                      <View className="w-2 h-2 rounded-full bg-red-500" />
+                                    {/* 站点标注标签 */}
+                                    {lowerBed.checkIn.stationName && (
+                                      <View className={`px-1 py-1 rounded text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                        <Text className="text-xs text-white">
+                                          {lowerBed.checkIn.stationName === 'exhibition' ? '会展' : lowerBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
+                                        </Text>
+                                      </View>
                                     )}
                                   </View>
                                   <Text className="text-xs text-gray-500 block">
@@ -558,15 +560,15 @@ const CheckInPage = () => {
                       )}
                       {upperBed?.status === 'occupied' && upperBed.checkIn && (
                         <View className="mt-1">
-                          <View className="flex items-center gap-1">
+                          <View className="flex items-center gap-2">
                             <Text className="text-xs text-blue-600 font-medium block">{upperBed.checkIn.name}</Text>
-                            {/* 站点标注指示器 */}
-                            {upperBed.checkIn.isRider ? (
-                              <View className="w-2 h-2 rounded-full bg-green-500" />
-                            ) : upperBed.checkIn.isStationMarked ? (
-                              <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
-                            ) : (
-                              <View className="w-2 h-2 rounded-full bg-red-500" />
+                            {/* 站点标注标签 */}
+                            {upperBed.checkIn.stationName && (
+                              <View className={`px-1 py-1 rounded text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                <Text className="text-xs text-white">
+                                  {upperBed.checkIn.stationName === 'exhibition' ? '会展' : upperBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
+                                </Text>
+                              </View>
                             )}
                           </View>
                           <Text className="text-xs text-gray-500 block">
@@ -612,15 +614,15 @@ const CheckInPage = () => {
                       )}
                       {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                         <View className="mt-1">
-                          <View className="flex items-center gap-1">
+                          <View className="flex items-center gap-2">
                             <Text className="text-xs text-blue-600 font-medium block">{lowerBed.checkIn.name}</Text>
-                            {/* 站点标注指示器 */}
-                            {lowerBed.checkIn.isRider ? (
-                              <View className="w-2 h-2 rounded-full bg-green-500" />
-                            ) : lowerBed.checkIn.isStationMarked ? (
-                              <View className="w-2 h-2 rounded-full bg-white border border-gray-400" />
-                            ) : (
-                              <View className="w-2 h-2 rounded-full bg-red-500" />
+                            {/* 站点标注标签 */}
+                            {lowerBed.checkIn.stationName && (
+                              <View className={`px-1 py-1 rounded text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'}`}>
+                                <Text className="text-xs text-white">
+                                  {lowerBed.checkIn.stationName === 'exhibition' ? '会展' : lowerBed.checkIn.stationName === 'wuyue' ? '吾悦' : '骑手'}
+                                </Text>
+                              </View>
                             )}
                           </View>
                           <Text className="text-xs text-gray-500 block">

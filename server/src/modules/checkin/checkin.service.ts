@@ -335,6 +335,7 @@ export class CheckInService {
         bedId: checkIn.bed_id,
         isStationMarked: checkIn.is_station_marked ?? false,
         isRider: checkIn.is_rider ?? false,
+        stationName: checkIn.station_name || null,
       };
     });
 
@@ -364,7 +365,8 @@ export class CheckInService {
         check_in_time,
         bed_id,
         is_station_marked,
-        is_rider
+        is_rider,
+        station_name
       `);
 
     if (error) {
@@ -412,6 +414,7 @@ export class CheckInService {
         bedId: checkIn.bed_id,
         isStationMarked: checkIn.is_station_marked ?? false,
         isRider: checkIn.is_rider ?? false,
+        stationName: checkIn.station_name || null,
       };
     });
 
@@ -425,38 +428,41 @@ export class CheckInService {
   }
 
   /**
-   * 切换站点标注状态
+   * 设置站点标注
+   * @param checkInId 入住记录ID
+   * @param stationName 站点名称: 'exhibition'=会展中心站, 'wuyue'=吾悦广场站, 'rider'=众包骑手, null=取消标注
    */
-  async toggleStationMarked(checkInId: number, value?: boolean) {
+  async setStationMarked(checkInId: number, stationName: string | null) {
     const client = getSupabaseClient();
 
-    // 获取当前状态
-    const { data: current, error: getError } = await client
-      .from('check_ins')
-      .select('is_station_marked, is_rider')
-      .eq('id', checkInId)
-      .single();
-
-    if (getError || !current) {
-      throw new Error('记录不存在');
+    const updateData: any = { updated_at: new Date().toISOString() };
+    if (stationName === null) {
+      updateData.is_station_marked = false;
+      updateData.station_name = null;
+    } else if (stationName === 'rider') {
+      updateData.is_rider = true;
+      updateData.is_station_marked = false;
+      updateData.station_name = 'rider';
+    } else {
+      updateData.is_station_marked = true;
+      updateData.is_rider = false;
+      updateData.station_name = stationName;
     }
-
-    const newValue = value !== undefined ? value : !current.is_station_marked;
 
     const { error: updateError } = await client
       .from('check_ins')
-      .update({ is_station_marked: newValue, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', checkInId);
 
     if (updateError) {
-      console.error('更新站点标注失败:', updateError);
-      throw new Error('更新失败');
+      console.error('设置站点标注失败:', updateError);
+      throw new Error('设置失败');
     }
 
     return {
       code: 200,
-      msg: '更新成功',
-      data: { isStationMarked: newValue },
+      msg: '设置成功',
+      data: { stationName },
     };
   }
 
