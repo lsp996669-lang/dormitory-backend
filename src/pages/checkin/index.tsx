@@ -54,6 +54,7 @@ interface BedInfo {
     checkInTime: string
     isStationMarked?: boolean
     isRider?: boolean
+    isFlagged?: boolean
     stationName?: string | null
   }
 }
@@ -147,6 +148,7 @@ const CheckInPage = () => {
             checkInTime: bed.checkIn.check_in_time,
             isStationMarked: bed.checkIn.is_station_marked ?? false,
             isRider: bed.checkIn.is_rider ?? false,
+            isFlagged: bed.checkIn.is_flagged ?? false,
             stationName: bed.checkIn.station_name ?? null,
           } : undefined
         }))
@@ -274,7 +276,7 @@ const CheckInPage = () => {
       // 已入住的床位，点击名字查看详情（不需要登录）
       if (bed.checkIn) {
         Taro.navigateTo({
-          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}&dormitory=${bed.dormitory || 'nansi'}&room=${bed.room || ''}&isStationMarked=${bed.checkIn.isStationMarked ?? false}&isRider=${bed.checkIn.isRider ?? false}`
+          url: `/pages/detail/index?name=${encodeURIComponent(bed.checkIn.name)}&idCard=${encodeURIComponent(bed.checkIn.idCard)}&phone=${encodeURIComponent(bed.checkIn.phone)}&checkInTime=${encodeURIComponent(bed.checkIn.checkInTime)}&floor=${floor}&bedNumber=${bed.bedNumber}&position=${bed.position}&checkInId=${bed.checkIn.id}&bedId=${bed.id}&dormitory=${bed.dormitory || 'nansi'}&room=${bed.room || ''}&isStationMarked=${bed.checkIn.isStationMarked ?? false}&isRider=${bed.checkIn.isRider ?? false}&isFlagged=${bed.checkIn.isFlagged ?? false}`
         })
       }
     }
@@ -429,7 +431,10 @@ const CheckInPage = () => {
                               {upperBed?.status === 'occupied' && upperBed.checkIn && (
                                 <View className="mt-1">
                                   <View className="flex items-center gap-2 flex-wrap">
-                                    <Text className="text-xs text-blue-600 font-semibold">{upperBed.checkIn.name}</Text>
+                                    <Text className={`text-xs font-semibold ${upperBed.checkIn.isFlagged ? 'text-red-600' : 'text-blue-600'}`}>{upperBed.checkIn.name}</Text>
+                                    {upperBed.checkIn.isFlagged && (
+                                      <Badge className="bg-red-500 text-white text-xs">!</Badge>
+                                    )}
                                     {/* 站点标注标签 */}
                                     {upperBed.checkIn.stationName && (
                                       <Badge className={`text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white`}>
@@ -561,7 +566,10 @@ const CheckInPage = () => {
                       {upperBed?.status === 'occupied' && upperBed.checkIn && (
                         <View className="mt-2">
                           <View className="flex items-center gap-2 flex-wrap">
-                            <Text className="text-xs text-blue-600 font-semibold">{upperBed.checkIn.name}</Text>
+                            <Text className={`text-xs font-semibold ${upperBed.checkIn.isFlagged ? 'text-red-600' : 'text-blue-600'}`}>{upperBed.checkIn.name}</Text>
+                            {upperBed.checkIn.isFlagged && (
+                              <Badge className="bg-red-500 text-white text-xs px-2">!</Badge>
+                            )}
                             {/* 站点标注标签 */}
                             {upperBed.checkIn.stationName && (
                               <Badge className={`text-xs ${upperBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white px-2`}>
@@ -615,7 +623,10 @@ const CheckInPage = () => {
                       {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                         <View className="mt-2">
                           <View className="flex items-center gap-2 flex-wrap">
-                            <Text className="text-xs text-blue-600 font-semibold">{lowerBed.checkIn.name}</Text>
+                            <Text className={`text-xs font-semibold ${lowerBed.checkIn.isFlagged ? 'text-red-600' : 'text-blue-600'}`}>{lowerBed.checkIn.name}</Text>
+                            {lowerBed.checkIn.isFlagged && (
+                              <Badge className="bg-red-500 text-white text-xs px-2">!</Badge>
+                            )}
                             {/* 站点标注标签 */}
                             {lowerBed.checkIn.stationName && (
                               <Badge className={`text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white px-2`}>

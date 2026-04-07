@@ -3,6 +3,7 @@ import Taro, { useRouter } from '@tarojs/taro'
 import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2, ArrowRight, Pencil, Copy, MapPin } from 'lucide-react-taro'
 import { Network } from '@/network'
 import { PasswordDialog } from '@/components/PasswordDialog'
@@ -41,7 +52,7 @@ type DateEditType = 'checkin-checkin' | 'checkout-checkin' | 'checkout-checkout'
 
 const DetailPage = () => {
   const router = useRouter()
-  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId, dormitory, room: currentRoom, isStationMarked: initialStationMarked, isRider: initialIsRider, stationName: initialStationName } = router.params
+  const { name, idCard, phone, checkInTime, checkOutTime, floor, bedNumber, position, checkInId, bedId, checkOutId, dormitory, room: currentRoom, isStationMarked: initialStationMarked, isRider: initialIsRider, stationName: initialStationName, isFlagged: initialIsFlagged } = router.params
   const isNanTwo = dormitory === 'nantwo'
   const [submitting, setSubmitting] = useState(false)
   const [showCheckOutDialog, setShowCheckOutDialog] = useState(false)
@@ -63,6 +74,9 @@ const DetailPage = () => {
     return null
   })
   const [showStationDialog, setShowStationDialog] = useState(false)
+  // 红名标记相关状态
+  const [isFlagged, setIsFlagged] = useState(() => initialIsFlagged === 'true')
+  const [showFlagConfirmDialog, setShowFlagConfirmDialog] = useState(false)
   // 床位互换相关状态
   const [swapTargetBedId, setSwapTargetBedId] = useState<number | null>(null)
   const [swapFloor, setSwapFloor] = useState<string>('')
@@ -412,6 +426,50 @@ const DetailPage = () => {
     }
   }
 
+  // 点击红名标记按钮
+  const handleFlagClick = () => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    setShowFlagConfirmDialog(true)
+  }
+
+  // 切换红名标记
+  const handleToggleFlag = async () => {
+    if (!checkLogin()) {
+      promptLogin()
+      return
+    }
+    if (!checkInId) return
+    setSubmitting(true)
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-flag',
+        method: 'POST',
+        data: {
+          checkInId: parseInt(checkInId as string, 10)
+        }
+      })
+      if (res.data?.code === 200) {
+        const newFlagged = !isFlagged
+        setIsFlagged(newFlagged)
+        setShowFlagConfirmDialog(false)
+        Taro.showToast({ 
+          title: newFlagged ? '已标记红名' : '已取消红名', 
+          icon: 'success' 
+        })
+      } else {
+        Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('切换红名标记失败:', error)
+      Taro.showToast({ title: '操作失败', icon: 'none' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   // 获取站点标签
   const getStationLabel = (station: string | null) => {
     const labels: Record<string, string> = {
@@ -629,7 +687,12 @@ const DetailPage = () => {
           <View className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-3">
             <User size={32} color="#2563eb" />
           </View>
-          <Text className="text-xl font-bold text-white block">{decodedName}</Text>
+          <Text className={`text-xl font-bold block ${isFlagged ? 'text-red-300' : 'text-white'}`}>{decodedName}</Text>
+          {isFlagged && (
+            <View className="mt-1">
+              <Badge className="bg-red-500 text-white text-xs">红名标记</Badge>
+            </View>
+          )}
           {hasCheckOut && (
             <View className="mt-2">
               <Text className="text-xs text-blue-200">已搬离</Text>
@@ -687,6 +750,32 @@ const DetailPage = () => {
                 </View>
               </View>
             </View>
+
+            {/* 红名标记 */}
+            {!hasCheckOut && checkInId && (
+              <View className="flex items-center gap-3">
+                <View className="w-5 h-5 flex items-center justify-center">
+                  <Text className="text-red-500 text-lg">!</Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-gray-500 block">红名标记</Text>
+                  <Text className="text-xs text-gray-400 mt-1">用于标记需要关注的人员</Text>
+                </View>
+                <Button
+                  size="sm"
+                  className={`px-3 py-1 rounded text-xs font-medium border ${
+                    isFlagged 
+                      ? 'bg-red-500 text-white border-red-500' 
+                      : 'bg-white text-red-500 border-red-300'
+                  }`}
+                  onClick={handleFlagClick}
+                >
+                  <Text className={isFlagged ? 'text-white' : 'text-red-500'}>
+                    {isFlagged ? '已标记' : '标记红名'}
+                  </Text>
+                </Button>
+              </View>
+            )}
 
             <View className="flex items-center gap-3">
               <Calendar size={20} color="#6b7280" />
@@ -1231,6 +1320,30 @@ const DetailPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 红名标记确认对话框 */}
+      <AlertDialog open={showFlagConfirmDialog} onOpenChange={setShowFlagConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isFlagged ? '取消红名标记' : '设置红名标记'}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isFlagged 
+                ? '确定要取消该人员的红名标记吗？取消后姓名将恢复正常颜色。'
+                : '确定要将该人员标记为红名吗？标记后姓名将显示为红色，以便重点关注。'
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowFlagConfirmDialog(false)}>取消</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleToggleFlag}
+              className={isFlagged ? 'bg-gray-500 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'}
+            >
+              {isFlagged ? '取消标记' : '确认标记'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </View>
   )
 }

@@ -70,6 +70,7 @@ export class CheckInService {
         position: bed.position,
         name,
         dormitory: bed.dormitory,
+        checkInId: checkIn.id,
       });
     }
 
@@ -498,6 +499,41 @@ export class CheckInService {
       code: 200,
       msg: '更新成功',
       data: { isRider: newValue },
+    };
+  }
+
+  /**
+   * 切换红名标记状态
+   */
+  async toggleFlag(checkInId: number) {
+    const client = getSupabaseClient();
+
+    const { data: current, error: getError } = await client
+      .from('check_ins')
+      .select('is_flagged')
+      .eq('id', checkInId)
+      .single();
+
+    if (getError || !current) {
+      throw new Error('记录不存在');
+    }
+
+    const newValue = !current.is_flagged;
+
+    const { error: updateError } = await client
+      .from('check_ins')
+      .update({ is_flagged: newValue, updated_at: new Date().toISOString() })
+      .eq('id', checkInId);
+
+    if (updateError) {
+      console.error('更新红名标记失败:', updateError);
+      throw new Error('更新失败');
+    }
+
+    return {
+      code: 200,
+      msg: '更新成功',
+      data: { isFlagged: newValue },
     };
   }
 

@@ -33,6 +33,8 @@ interface Notification {
   message: string
   created_at: string
   dormitory?: string
+  check_in_id?: number
+  is_flagged?: boolean
 }
 
 interface NanTwoFloorStats {
@@ -658,7 +660,7 @@ const FloorPage = () => {
                             </Text>
                           </Badge>
                           <User size={13} color="#4b5563" />
-                          <Text className="text-sm font-semibold text-gray-800">{notification.name}</Text>
+                          <Text className={`text-sm font-semibold ${notification.is_flagged ? 'text-red-500' : 'text-gray-800'}`}>{notification.name}</Text>
                         </View>
                         <View className="flex items-center gap-1.5 text-xs text-gray-500 ml-1">
                           <Building size={12} color="#9ca3af" />

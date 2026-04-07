@@ -11,6 +11,7 @@ export class NotificationService {
     position: string;
     name: string;
     dormitory?: string;
+    checkInId?: number;
   }) {
     const client = getSupabaseClient();
 
@@ -31,6 +32,7 @@ export class NotificationService {
         name: data.name,
         message,
         dormitory: dormitoryValue,
+        check_in_id: data.checkInId ?? null,
       })
       .select()
       .single();
@@ -61,6 +63,30 @@ export class NotificationService {
     if (error) {
       console.error('获取通知失败:', error);
       throw new Error('获取通知失败');
+    }
+
+    // 获取每个通知对应的 is_flagged 状态
+    if (notifications && notifications.length > 0) {
+      const checkInIds = notifications
+        .map((n) => n.check_in_id)
+        .filter((id) => id != null);
+
+      if (checkInIds.length > 0) {
+        const { data: checkIns } = await client
+          .from('check_ins')
+          .select('id, is_flagged')
+          .in('id', checkInIds);
+
+        const flagMap = new Map(
+          (checkIns || []).map((c) => [c.id, c.is_flagged ?? false])
+        );
+
+        notifications.forEach((n) => {
+          if (n.check_in_id) {
+            (n as any).is_flagged = flagMap.get(n.check_in_id) ?? false;
+          }
+        });
+      }
     }
 
     return {

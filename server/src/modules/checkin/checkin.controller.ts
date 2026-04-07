@@ -65,6 +65,12 @@ export class CheckInController {
     return await this.checkInService.toggleRider(body.checkInId, body.value);
   }
 
+  @Post('toggle-flag')
+  async toggleFlag(@Body() body: { checkInId: number }) {
+    console.log('切换红名标记请求:', body);
+    return await this.checkInService.toggleFlag(body.checkInId);
+  }
+
   @Get('swap-candidates/:checkInId')
   async getSwapCandidates(@Param('checkInId') checkInId: string) {
     console.log('获取互换候选请求:', checkInId);
