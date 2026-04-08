@@ -39,3 +39,9 @@ pnpm-debug.log*
 
 # Key
 # key/
+private.key
+*.key
+
+# Deployment
+qrcode.jpg
+qrcode.png

@@ -91,6 +91,31 @@ pnpm build:server # 仅构建后端
 pnpm preview:weapp # 构建并生成预览小程序二维码
 ```
 
+## 🚀 自动部署
+
+本项目已配置微信小程序自动部署功能，支持一键部署和 CI/CD 自动化。
+
+### 快速开始
+
+查看 [DEPLOYMENT_QUICKSTART.md](./DEPLOYMENT_QUICKSTART.md) 了解如何快速配置自动部署。
+
+### 本地部署
+
+```bash
+# 上传预览版
+pnpm deploy:preview
+
+# 上传体验版
+pnpm deploy:review
+
+# 上传正式版
+pnpm deploy:production
+```
+
+### GitHub Actions 自动部署
+
+查看 [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) 了解完整的 CI/CD 配置指南。
+
 ## 前端核心开发规范
 
 ### 新建页面流程
