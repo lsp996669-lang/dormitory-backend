@@ -1,22 +1,65 @@
 {
   "miniprogramRoot": "./dist-weapp",
+  "cloudfunctionRoot": "./cloudfunctions/",
+  "cloudbaseRoot": "./cloudfunctions/",
   "projectname": "宿舍管理助手",
   "description": "宿舍管理助手 - 企业内部宿舍入住与搬离管理系统",
   "appid": "wxeb1d51afc9237cda",
+  "cloudfunctionTemplateRoot": "./cloudfunctionTemplate",
   "setting": {
     "urlCheck": false,
     "es6": false,
     "enhance": false,
-    "compileHotReLoad": true,
     "postcss": false,
+    "preloadBackgroundData": false,
     "minified": true,
-    "ignoreHttpsCase": true,
-    "ignoreDomainNameCheck": true
+    "newFeature": true,
+    "coverView": true,
+    "nodeModules": true,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "uglifyFileName": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": true,
+    "lazyloadPlaceholderEnable": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "enableEngineNative": false,
+    "useIsolateContext": true,
+    "userConfirmedBundleSwitch": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "showES6CompileOption": false,
+    "minifyWXML": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "useStaticServer": true,
+    "ignoreUploadUnusedFiles": true,
+    "useCompilerPlugins": false
   },
   "compileType": "miniprogram",
+  "libVersion": "2.32.3",
   "srcMiniprogramRoot": "./src/",
   "condition": {},
-  "debugOptions": {
-    "debugAsRelease": true
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  },
+  "packOptions": {
+    "ignore": [],
+    "include": []
   }
 }
