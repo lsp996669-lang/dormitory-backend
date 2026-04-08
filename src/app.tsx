@@ -13,7 +13,7 @@ const initCloud = () => {
 
       // 初始化云开发
       Taro.cloud.init({
-        env: 'cloud1-7g1234567890', // 替换为您的云开发环境 ID
+        env: 'cloud1-9gxn7yw03252175a', // 用户云开发环境 ID
         traceUser: true,
       });
 
