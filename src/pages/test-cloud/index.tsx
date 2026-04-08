@@ -10,6 +10,7 @@ import './index.css'
 const TestCloudPage = () => {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [bedNumber, setBedNumber] = useState('3')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState('')
 
@@ -107,6 +108,37 @@ const TestCloudPage = () => {
     }
   }
 
+  const testAddBed = async () => {
+    setLoading(true)
+    setResult('')
+
+    try {
+      console.log('[测试] 调用 addBed 云函数')
+      const res = await Cloud.callFunction('addBed', {
+        dormitory: 'nantwo',
+        floor: 2,
+        room: '201',
+        bedNumber: bedNumber
+      })
+
+      console.log('[测试] 云函数响应:', res)
+
+      if (res.result?.code === 200) {
+        setResult(`✅ 成功：${res.result.msg}`)
+        Taro.showToast({ title: '添加成功', icon: 'success' })
+      } else {
+        setResult(`❌ 失败：${res.result?.msg}`)
+        Taro.showToast({ title: res.result?.msg || '添加失败', icon: 'none' })
+      }
+    } catch (error) {
+      console.error('[测试] 云函数调用失败:', error)
+      setResult(`❌ 异常：${error.errMsg || error.message}`)
+      Taro.showToast({ title: '调用失败', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <View className="min-h-screen bg-gray-50 p-4">
       <View className="bg-white rounded-lg p-4 mb-4 shadow-sm">
@@ -169,6 +201,29 @@ const TestCloudPage = () => {
         >
           {loading ? '测试中...' : '测试导出数据'}
         </Button>
+      </View>
+
+      <View className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+        <Text className="text-base font-semibold text-gray-800 mb-3">添加床位测试（南二巷201房）</Text>
+        <View className="space-y-3">
+          <View>
+            <Label className="text-sm text-gray-700">床位编号</Label>
+            <Input
+              className="mt-1"
+              placeholder="请输入床位编号（如：3）"
+              type="number"
+              value={bedNumber}
+              onInput={(e) => setBedNumber(e.detail.value)}
+            />
+          </View>
+          <Button
+            className="w-full bg-orange-600 text-white"
+            onClick={testAddBed}
+            disabled={loading}
+          >
+            {loading ? '添加中...' : '添加3号床位（上下铺）'}
+          </Button>
+        </View>
       </View>
 
       {result && (

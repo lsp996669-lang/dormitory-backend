@@ -31,7 +31,36 @@
 - **输入**：无
 - **输出**：Excel 文件的 fileID
 
+### 6. addBed（添加床位）
+- **功能**：为指定房间添加床位（自动创建上下铺）
+- **输入**：dormitory（宿舍名称）, floor（楼层）, room（房号）, bedNumber（床位编号）
+- **输出**：添加成功的床位信息
+- **示例**：
+  ```javascript
+  {
+    dormitory: 'nantwo',
+    floor: 2,
+    room: '201',
+    bedNumber: 3
+  }
+  ```
+
 ## 云数据库集合
+
+### beds（床位集合）
+```javascript
+{
+  _id: string,
+  dormitory: string,      // 宿舍名称（nansi=南四巷180号, nantwo=南二巷24号）
+  floor: string,          // 楼层（如：'2'）
+  room: string,           // 房号（如：'201'，南四巷无房号则为空）
+  bed_number: string,     // 床位编号（如：'3'）
+  position: string,       // 位置（upper=上铺, lower=下铺）
+  status: string,         // 状态（empty=空闲, occupied=已入住, maintenance=维修中）
+  created_at: Date,
+  updated_at: Date
+}
+```
 
 ### checkin_records（入住记录集合）
 ```javascript
@@ -91,7 +120,7 @@
 
 ### 3. 上传云函数
 
-1. 右键点击每个云函数目录（checkin, checkout, getCheckinList, getCheckoutList, exportData）
+1. 右键点击每个云函数目录（checkin, checkout, getCheckinList, getCheckoutList, exportData, addBed）
 2. 选择「上传并部署：云端安装依赖（不上传 node_modules）」
 3. 等待所有云函数上传完成
 
@@ -102,6 +131,7 @@
 3. 创建以下集合：
    - `checkin_records`（入住记录）
    - `checkout_records`（搬离记录）
+   - `beds`（床位信息）
 4. 为每个集合设置权限（建议选择「所有用户可读，仅创建者可写」）
 
 ### 5. 配置云存储
@@ -154,6 +184,96 @@ if (res.result?.code === 200) {
   }
 }
 ```
+
+## 添加床位指南
+
+### 方法一：使用 addBed 云函数（推荐）
+
+1. 上传 `addBed` 云函数：
+   ```bash
+   # 在微信开发者工具中
+   # 右键点击 cloudfunctions/addBed 目录
+   # 选择「上传并部署：云端安装依赖」
+   ```
+
+2. 调用云函数添加床位：
+   ```typescript
+   import { Cloud } from '@/cloud'
+
+   // 为南二巷24号宿舍 2楼 201房 添加3号床位
+   const res = await Cloud.callFunction('addBed', {
+     dormitory: 'nantwo',
+     floor: 2,
+     room: '201',
+     bedNumber: 3
+   })
+
+   if (res.result?.code === 200) {
+     console.log('添加成功', res.result.msg)
+     // 输出：成功添加床位：201房3号床（上下铺）
+   } else {
+     console.error('添加失败', res.result?.msg)
+   }
+   ```
+
+3. 测试添加床位：
+   - 访问测试页面：`pages/test-cloud/index`
+   - 在"添加床位测试"部分输入床位编号
+   - 点击"添加床位"按钮
+   - 检查云数据库的 `beds` 集合是否新增了两条记录（上铺和下铺）
+
+### 方法二：手动在云开发控制台添加
+
+1. 打开云开发控制台
+2. 进入「数据库」→「beds」集合
+3. 点击「添加记录」
+4. 添加上铺记录：
+   ```javascript
+   {
+     "dormitory": "nantwo",
+     "floor": "2",
+     "room": "201",
+     "bed_number": "3",
+     "position": "upper",
+     "status": "empty",
+     "created_at": "2024-01-01T00:00:00.000Z",
+     "updated_at": "2024-01-01T00:00:00.000Z"
+   }
+   ```
+5. 添加下铺记录：
+   ```javascript
+   {
+     "dormitory": "nantwo",
+     "floor": "2",
+     "room": "201",
+     "bed_number": "3",
+     "position": "lower",
+     "status": "empty",
+     "created_at": "2024-01-01T00:00:00.000Z",
+     "updated_at": "2024-01-01T00:00:00.000Z"
+   }
+   ```
+
+### 床位数据说明
+
+**dormitory（宿舍名称）**：
+- `nansi` - 南四巷180号
+- `nantwo` - 南二巷24号
+
+**floor（楼层）**：
+- `1` - 1楼
+- `2` - 2楼
+- `3` - 3楼
+- `4` - 4楼
+
+**position（位置）**：
+- `upper` - 上铺
+- `lower` - 下铺
+
+**status（状态）**：
+- `empty` - 空闲
+- `occupied` - 已入住
+- `maintenance` - 维修中
 
 ## 常见问题
 
