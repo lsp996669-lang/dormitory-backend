@@ -1,6 +1,8 @@
-# Coze Mini Program
+# Coze Mini Program - 宿舍管理助手
 
-这是一个基于 [Taro 4](https://docs.taro.zone/docs/) + [Nest.js](https://nestjs.com/) 的前后端分离项目，由扣子编程 CLI 创建。
+这是一个基于 [Taro 4](https://docs.taro.zone/docs/) 的微信小程序，使用**微信云开发**提供后端服务。
+
+> **重要提示**：本项目已从 NestJS 后端迁移到微信云开发。请查看 [CLOUD_SETUP.md](./CLOUD_SETUP.md) 了解如何设置和使用云开发。
 
 ## 技术栈
 
