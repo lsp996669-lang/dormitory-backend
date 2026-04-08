@@ -4,6 +4,33 @@ import { Network } from '@/network';
 import '@/app.css';
 import { Preset } from './presets';
 
+// ========== 云开发初始化 ==========
+const initCloud = () => {
+  try {
+    // 检查是否在小程序环境中
+    if (Taro.getEnv() === Taro.ENV_TYPE.WEAPP) {
+      console.log('[Cloud] 初始化云开发环境...');
+
+      // 初始化云开发
+      Taro.cloud.init({
+        env: 'cloud1-7g1234567890', // 替换为您的云开发环境 ID
+        traceUser: true,
+      });
+
+      console.log('[Cloud] ✅ 云开发初始化成功');
+    } else {
+      console.log('[Cloud] ⚠️ 非小程序环境，跳过云开发初始化');
+    }
+  } catch (error) {
+    console.error('[Cloud] ❌ 云开发初始化失败:', error);
+    Taro.showToast({
+      title: '云开发初始化失败',
+      icon: 'none',
+      duration: 3000
+    });
+  }
+};
+
 // 保活心跳间隔（3分钟）
 const KEEP_ALIVE_INTERVAL = 3 * 60 * 1000;
 
@@ -16,6 +43,9 @@ const App = ({ children }: PropsWithChildren) => {
   const isOnlineRef = useRef(true);
 
   useEffect(() => {
+    // ========== 初始化云开发 ==========
+    initCloud();
+
     // ========== 心跳保活机制 ==========
     const keepAlive = async () => {
       try {
@@ -24,7 +54,7 @@ const App = ({ children }: PropsWithChildren) => {
           method: 'GET',
           timeout: 10000,
         });
-        
+
         if (res.statusCode === 200) {
           console.log('[KeepAlive] ✅ 心跳成功:', new Date().toLocaleTimeString());
           retryCountRef.current = 0;
@@ -35,7 +65,7 @@ const App = ({ children }: PropsWithChildren) => {
       } catch (error) {
         console.warn('[KeepAlive] ❌ 心跳失败:', error);
         isOnlineRef.current = false;
-        
+
         // 重试机制
         if (retryCountRef.current < MAX_RETRY_COUNT) {
           retryCountRef.current++;
@@ -48,13 +78,13 @@ const App = ({ children }: PropsWithChildren) => {
     // ========== 网络状态监听 ==========
     const handleNetworkChange = (res: Taro.onNetworkStatusChange.CallbackResult) => {
       console.log('[Network] 网络状态变化:', res.isConnected ? '已连接' : '已断开', res.networkType);
-      
+
       if (res.isConnected && !isOnlineRef.current) {
         // 网络恢复，立即发送心跳
         console.log('[Network] 🔄 网络恢复，重新连接服务...');
         retryCountRef.current = 0;
         keepAlive();
-        
+
         // 通知用户
         Taro.showToast({
           title: '网络已恢复',
@@ -83,7 +113,7 @@ const App = ({ children }: PropsWithChildren) => {
 
     // ========== 初始化 ==========
     console.log('[App] 初始化保活机制...');
-    
+
     // 启动时立即检测
     keepAlive();
 
@@ -115,7 +145,7 @@ const App = ({ children }: PropsWithChildren) => {
       Taro.offNetworkStatusChange(handleNetworkChange);
       Taro.offAppShow(handleAppShow);
       Taro.offAppHide(handleAppHide);
-      
+
       if (typeof document !== 'undefined') {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
       }
