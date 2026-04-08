@@ -194,6 +194,9 @@ importers:
       '@aws-sdk/lib-storage':
         specifier: ^3.958.0
         version: 3.972.0(@aws-sdk/client-s3@3.972.0)
+      '@nestjs/cli':
+        specifier: ^10.4.9
+        version: 10.4.9(@swc/core@1.4.14)(esbuild@0.25.12)
       '@nestjs/common':
         specifier: ^10.4.15
         version: 10.4.20(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -233,13 +236,13 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
       zod:
         specifier: ^4.3.5
         version: 4.3.5
     devDependencies:
-      '@nestjs/cli':
-        specifier: ^10.4.9
-        version: 10.4.9(@swc/core@1.4.14)(esbuild@0.25.12)
       '@nestjs/schematics':
         specifier: ^10.2.3
         version: 10.2.3(chokidar@3.6.0)(typescript@5.9.3)
@@ -258,9 +261,6 @@ importers:
       exceljs:
         specifier: ^4.4.0
         version: 4.4.0
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
 
 packages:
 
