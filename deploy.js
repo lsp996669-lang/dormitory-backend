@@ -102,13 +102,17 @@ async function uploadReview() {
 
     // 生成预览二维码
     console.log('📱 正在生成预览二维码...');
-    const qrcodePath = path.resolve(__dirname, 'qrcode.jpg');
-    await ci.getPreviewProqrCode({
-      project,
-      filepath: qrcodePath,
-    });
-
-    console.log(`✅ 二维码已生成：${qrcodePath}`);
+    try {
+      const qrcodePath = path.resolve(__dirname, 'qrcode.jpg');
+      await ci.getPreviewQRCode({
+        project,
+        filepath: qrcodePath,
+      });
+      console.log(`✅ 二维码已生成：${qrcodePath}`);
+    } catch (error) {
+      console.log('⚠️ 二维码生成失败（可选）：', error.message);
+      console.log('✅ 体验版已成功上传，可在微信开发者工具中手动生成二维码');
+    }
   } catch (error) {
     console.error('❌ 体验版上传失败：', error);
     process.exit(1);
