@@ -43,11 +43,13 @@ const deployOptions = {
   version: process.env.MINIPROGRAM_VERSION || new Date().toISOString().slice(0, 10).replace(/-/g, '.'),
   desc: process.env.MINIPROGRAM_DESC || `自动部署 - ${new Date().toLocaleString('zh-CN')}`,
   setting: {
-    es6: true,
-    es7: true,
-    minify: true,
+    es6: false,
+    es7: false,
+    minify: false,
     codeProtect: false,
     autoPrefixWXSS: true,
+    enhance: false,
+    useCompilerPlugins: [],
   },
   onProgressUpdate: (log) => {
     console.log(log);
