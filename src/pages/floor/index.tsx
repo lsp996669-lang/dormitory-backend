@@ -368,7 +368,7 @@ const FloorPage = () => {
       return
     }
     Taro.navigateTo({
-      url: `/pages/rollcall/index?floor=${floor}`
+      url: `/pages/rollcall/index?dormitory=nansi&floor=${floor}`
     })
   }
 

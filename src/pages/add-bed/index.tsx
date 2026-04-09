@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bed, Plus, Building, ChevronRight, House, Check, CircleAlert } from 'lucide-react-taro'
 import { Cloud } from '@/cloud'
-import { Network } from '@/network'
 import './index.css'
 
 const AddBedPage = () => {
@@ -95,29 +94,13 @@ const AddBedPage = () => {
         bedNumber: bedNumber.trim()
       })
 
-      let res
-      if (dorm === 'nantwo') {
-        // 南二巷：调用云函数
-        res = await Cloud.callFunction('addBed', {
-          dormitory: 'nantwo',
-          floor,
-          room,
-          bedNumber: bedNumber.trim()
-        })
-      } else {
-        // 南四巷：使用网络请求
-        const networkRes = await Network.request({
-          url: '/api/beds/add',
-          method: 'POST',
-          data: {
-            dormitory: 'nansi',
-            floor,
-            room: room,
-            bedNumber: parseInt(bedNumber.trim(), 10)
-          }
-        })
-        res = { result: networkRes.data }
-      }
+      // 统一使用云函数添加床位
+      const res = await Cloud.callFunction('addBed', {
+        dormitory: dorm,
+        floor,
+        room,
+        bedNumber: bedNumber.trim()
+      })
 
       console.log('[AddBed] 添加结果:', res)
 

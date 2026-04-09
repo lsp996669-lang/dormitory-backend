@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Taro, { useRouter } from '@tarojs/taro'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Network } from '@/network'
+import { Cloud } from '@/cloud'
 import { User, Check, X, Users } from 'lucide-react-taro'
 import './index.css'
 
@@ -54,8 +54,9 @@ interface RollCallStats {
 
 const RollCallPage = () => {
   const router = useRouter()
-  const { floor: floorParam } = router.params
+  const { floor: floorParam, dormitory: dormitoryParam } = router.params
   const floor = parseInt(floorParam || '2', 10)
+  const dormitory = dormitoryParam || undefined // 南四巷默认不传，显示所有
 
   const [rollCallList, setRollCallList] = useState<RollCallItem[]>([])
   const [stats, setStats] = useState<RollCallStats | null>(null)
@@ -73,50 +74,79 @@ const RollCallPage = () => {
   const loadRollCallData = async () => {
     setLoading(true)
     try {
-      // 并行加载列表和统计
-      const [listRes, statsRes] = await Promise.all([
-        Network.request({
-          url: `/api/rollcall/list?floor=${floor}&date=${selectedDate}`
-        }),
-        Network.request({
-          url: `/api/rollcall/stats?floor=${floor}&date=${selectedDate}`
-        })
-      ])
+      console.log('[RollCall] 开始加载点名数据:', { floor, selectedDate, dormitory })
 
-      console.log('[RollCall] 点名列表响应:', listRes.data)
-      console.log('[RollCall] 点名统计响应:', statsRes.data)
+      // 调用云函数获取点名列表
+      const listRes = await Cloud.callFunction('getRollCallList', {
+        floor,
+        date: selectedDate,
+        dormitory // 传递宿舍区域参数
+      })
 
-      if (listRes.data?.code === 200 && listRes.data?.data) {
-        setRollCallList(listRes.data.data)
+      console.log('[RollCall] 点名列表响应:', listRes)
+
+      if (listRes.result?.code === 200 && listRes.result?.data) {
+        setRollCallList(listRes.result.data)
         // 保存到本地缓存
-        const cacheKey = `rollcall_${floor}_${selectedDate}`
-        Taro.setStorageSync(cacheKey, listRes.data.data)
+        const cacheKey = `rollcall_${floor}_${selectedDate}_${dormitory || 'all'}`
+        Taro.setStorageSync(cacheKey, listRes.result.data)
         console.log('[RollCall] 数据已缓存到本地:', cacheKey)
+      } else {
+        // 尝试从本地缓存加载
+        const cacheKey = `rollcall_${floor}_${selectedDate}_${dormitory || 'all'}`
+        const cachedList = Taro.getStorageSync(cacheKey)
+
+        if (cachedList && cachedList.length > 0) {
+          console.log('[RollCall] 使用本地缓存数据')
+          setRollCallList(cachedList)
+          Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
+        } else {
+          Taro.showToast({ title: '加载失败', icon: 'none' })
+          setRollCallList([])
+        }
       }
 
-      if (statsRes.data?.code === 200 && statsRes.data?.data) {
-        setStats(statsRes.data.data)
-        // 保存统计到本地缓存
-        const statsCacheKey = `rollcall_stats_${floor}_${selectedDate}`
-        Taro.setStorageSync(statsCacheKey, statsRes.data.data)
-      }
+      // 计算统计数据
+      const presentCount = rollCallList.filter(item => item.status === 'present').length
+      const absentCount = rollCallList.filter(item => item.status === 'absent').length
+      const notCheckedCount = rollCallList.filter(item => !item.status).length
+
+      setStats({
+        date: selectedDate,
+        floor,
+        totalPeople: rollCallList.length,
+        presentCount,
+        absentCount,
+        notCheckedCount
+      })
     } catch (error) {
       console.error('[RollCall] 加载点名数据失败:', error)
       // 尝试从本地缓存加载
-      const cacheKey = `rollcall_${floor}_${selectedDate}`
-      const statsCacheKey = `rollcall_stats_${floor}_${selectedDate}`
+      const cacheKey = `rollcall_${floor}_${selectedDate}_${dormitory || 'all'}`
       const cachedList = Taro.getStorageSync(cacheKey)
-      const cachedStats = Taro.getStorageSync(statsCacheKey)
-      
+
       if (cachedList && cachedList.length > 0) {
         console.log('[RollCall] 使用本地缓存数据')
         setRollCallList(cachedList)
-        if (cachedStats) {
-          setStats(cachedStats)
-        }
+
+        // 计算统计数据
+        const presentCount = cachedList.filter(item => item.status === 'present').length
+        const absentCount = cachedList.filter(item => item.status === 'absent').length
+        const notCheckedCount = cachedList.filter(item => !item.status).length
+
+        setStats({
+          date: selectedDate,
+          floor,
+          totalPeople: cachedList.length,
+          presentCount,
+          absentCount,
+          notCheckedCount
+        })
+
         Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
       } else {
         Taro.showToast({ title: '加载失败，请检查网络连接', icon: 'none' })
+        setRollCallList([])
       }
     } finally {
       setLoading(false)
@@ -129,23 +159,19 @@ const RollCallPage = () => {
       promptLogin()
       return
     }
-    
+
     setSubmitting(true)
     try {
-      const res = await Network.request({
-        url: '/api/rollcall/mark',
-        method: 'POST',
-        data: {
-          floor,
-          checkInId: item.checkInId,
-          name: item.name,
-          status
-        }
+      const res = await Cloud.callFunction('markRollCall', {
+        floor,
+        checkInId: item.checkInId,
+        name: item.name,
+        status
       })
 
-      console.log('点名响应:', res.data)
+      console.log('点名响应:', res)
 
-      if (res.data?.code === 200) {
+      if (res.result?.code === 200) {
         // 更新本地状态
         setRollCallList(prev =>
           prev.map(p =>
@@ -154,17 +180,17 @@ const RollCallPage = () => {
               : p
           )
         )
-        
+
         // 更新统计
         loadRollCallData()
-        
+
         Taro.showToast({
           title: status === 'present' ? '已标记在场' : '已标记缺席',
           icon: 'success',
           duration: 1000
         })
       } else {
-        Taro.showToast({ title: res.data?.msg || '点名失败', icon: 'none' })
+        Taro.showToast({ title: res.result?.msg || '点名失败', icon: 'none' })
       }
     } catch (error) {
       console.error('点名失败:', error)
@@ -180,10 +206,10 @@ const RollCallPage = () => {
       promptLogin()
       return
     }
-    
+
     // 只对未点名的人员进行批量操作
     const uncheckedItems = rollCallList.filter(item => !item.status)
-    
+
     if (uncheckedItems.length === 0) {
       Taro.showToast({ title: '没有需要点名的人员', icon: 'none' })
       return
@@ -191,29 +217,25 @@ const RollCallPage = () => {
 
     setSubmitting(true)
     try {
-      const res = await Network.request({
-        url: '/api/rollcall/batch',
-        method: 'POST',
-        data: {
-          floor,
-          items: uncheckedItems.map(item => ({
-            checkInId: item.checkInId,
-            name: item.name,
-            status
-          }))
-        }
+      const res = await Cloud.callFunction('batchRollCall', {
+        floor,
+        items: uncheckedItems.map(item => ({
+          checkInId: item.checkInId,
+          name: item.name,
+          status
+        }))
       })
 
-      console.log('批量点名响应:', res.data)
+      console.log('批量点名响应:', res)
 
-      if (res.data?.code === 200) {
+      if (res.result?.code === 200) {
         loadRollCallData()
         Taro.showToast({
           title: `已批量标记${status === 'present' ? '在场' : '缺席'}`,
           icon: 'success'
         })
       } else {
-        Taro.showToast({ title: res.data?.msg || '批量点名失败', icon: 'none' })
+        Taro.showToast({ title: res.result?.msg || '批量点名失败', icon: 'none' })
       }
     } catch (error) {
       console.error('批量点名失败:', error)
