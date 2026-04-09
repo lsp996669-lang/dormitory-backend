@@ -1,4 +1,4 @@
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect } from 'react';
 import Taro from '@tarojs/taro';
 import '@/app.css';
 import { Preset } from './presets';
