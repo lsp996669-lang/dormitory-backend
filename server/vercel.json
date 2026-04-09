@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "outputDirectory": "out",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index"
+  "buildCommand": "npm run build:local",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs20.x"
     }
-  ]
+  }
 }
