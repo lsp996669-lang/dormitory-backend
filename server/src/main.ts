@@ -31,19 +31,19 @@ async function bootstrap() {
   // 1. 开启优雅关闭 Hooks (关键!)
   app.enableShutdownHooks();
 
-  // 2. 解析端口：优先使用环境变量（Vercel 会设置 PORT），然后是命令行参数
-  const port = process.env.PORT || parsePort();
+  // 2. 解析端口
+  const port = parsePort();
   try {
     await app.listen(port);
     console.log(`Server running on http://localhost:${port}`);
   } catch (err) {
     if (err.code === 'EADDRINUSE') {
-      console.error(`❌ 端口 ${port} 被占用! 请运行 'npx kill-port ${port}' 然后重试。`);
+      console.error(`❌ 端口 \({port} 被占用! 请运行 'npx kill-port \){port}' 然后重试。`);
       process.exit(1);
     } else {
       throw err;
     }
   }
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Application is running on: http://localhost:3000`);
 }
 bootstrap();
