@@ -11,6 +11,7 @@ export default defineAppConfig({
     'pages/test-cloud/index',
     'pages/add-bed/index',
     'pages/temp-file-url/index',
+    'pages/auto-export/index',
   ],
   window: {
     backgroundTextStyle: 'light',
