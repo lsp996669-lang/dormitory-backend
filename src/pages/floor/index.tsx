@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -52,7 +52,6 @@ const FloorPage = () => {
   const [notificationCount, setNotificationCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
-  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [expandedDormitory, setExpandedDormitory] = useState(true) // 南四巷180号宿舍展开状态
   const [expandedNanTwo, setExpandedNanTwo] = useState(false) // 南二巷宿舍展开状态
   const [nanTwoFloorStats, setNanTwoFloorStats] = useState<NanTwoFloorStats[]>([]) // 南二巷楼层统计
@@ -117,29 +116,7 @@ const FloorPage = () => {
   }>>([])
   const [showFlaggedList, setShowFlaggedList] = useState(false)
 
-  // 检查服务器状态
-  const checkServerStatus = async () => {
-    try {
-      const res = await Network.request({
-        url: '/api/export/stats',
-        method: 'GET',
-      })
-      if (res.statusCode === 200) {
-        setServerStatus('online')
-      } else {
-        setServerStatus('offline')
-      }
-    } catch (error) {
-      setServerStatus('offline')
-    }
-  }
-
-  // 定时检查服务器状态
-  useEffect(() => {
-    checkServerStatus()
-    const timer = setInterval(checkServerStatus, 60000) // 每分钟检查一次
-    return () => clearInterval(timer)
-  }, [])
+  // 移除服务器状态检查，已迁移到 CloudBase
 
   useDidShow(() => {
     checkAuth()
@@ -624,32 +601,6 @@ const FloorPage = () => {
         </Card>
       )}
 
-      {/* 服务状态指示器 */}
-      <View className="mb-4">
-        <View 
-          className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer inline-flex"
-          style={{ backgroundColor: serverStatus === 'online' ? '#dcfce7' : serverStatus === 'offline' ? '#fee2e2' : '#fef3c7' }}
-          onClick={checkServerStatus}
-        >
-          {serverStatus === 'online' ? (
-            <>
-              <Wifi size={16} color="#16a34a" />
-              <Text className="text-xs" style={{ color: '#16a34a' }}>服务正常</Text>
-            </>
-          ) : serverStatus === 'offline' ? (
-            <>
-              <WifiOff size={16} color="#dc2626" />
-              <Text className="text-xs" style={{ color: '#dc2626' }}>服务离线</Text>
-            </>
-          ) : (
-            <>
-              <RefreshCw size={16} color="#d97706" />
-              <Text className="text-xs" style={{ color: '#d97706' }}>检测中...</Text>
-            </>
-          )}
-        </View>
-      </View>
-
       {/* 红名人员警示区域 */}
       {flaggedPeople.length > 0 && (
         <Card className="overflow-hidden mb-4 border-2 border-red-300 bg-red-50">
@@ -735,33 +686,7 @@ const FloorPage = () => {
         </Card>
       )}
 
-      {/* 搜索功能 - 已登录时显示 */}
-      {serverStatus === 'offline' && (
-        <Card className="overflow-hidden mb-4 border-2 border-red-200 bg-red-50">
-          <CardContent className="p-4">
-            <View className="flex items-center gap-3">
-              <View className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                <WifiOff size={20} color="#dc2626" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-red-800">后端服务已断开</Text>
-                <Text className="text-xs text-red-600 mt-1">
-                  请保持开发网页打开，或刷新此页面重新连接
-                </Text>
-              </View>
-              <Button
-                size="sm"
-                className="bg-red-600 text-white"
-                onClick={checkServerStatus}
-              >
-                <RefreshCw size={14} color="#fff" />
-              </Button>
-            </View>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 系统通知卡片 */}
+      {/* 搜索功能 - 已登录时显示 */}{/* 系统通知卡片 */}
       <Card className="overflow-hidden mb-4">
         <CardHeader className="pb-3">
           <View className="flex items-center justify-between">

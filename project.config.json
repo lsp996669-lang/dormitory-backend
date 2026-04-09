@@ -15,6 +15,11 @@
     "ignoreHttpsCase": true,
     "ignoreDomainNameCheck": true
   },
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "./assets" }
+    ]
+  },
   "compileType": "miniprogram",
   "srcMiniprogramRoot": "./src/",
   "condition": {},

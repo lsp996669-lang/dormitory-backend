@@ -86,10 +86,26 @@ const RollCallPage = () => {
       console.log('[RollCall] 点名列表响应:', listRes)
 
       if (listRes.result?.code === 200 && listRes.result?.data) {
-        setRollCallList(listRes.result.data)
+        const data = listRes.result.data
+        setRollCallList(data)
+
+        // 计算统计数据
+        const presentCount = data.filter(item => item.status === 'present').length
+        const absentCount = data.filter(item => item.status === 'absent').length
+        const notCheckedCount = data.filter(item => !item.status).length
+
+        setStats({
+          date: selectedDate,
+          floor,
+          totalPeople: data.length,
+          presentCount,
+          absentCount,
+          notCheckedCount
+        })
+
         // 保存到本地缓存
         const cacheKey = `rollcall_${floor}_${selectedDate}_${dormitory || 'all'}`
-        Taro.setStorageSync(cacheKey, listRes.result.data)
+        Taro.setStorageSync(cacheKey, data)
         console.log('[RollCall] 数据已缓存到本地:', cacheKey)
       } else {
         // 尝试从本地缓存加载
@@ -99,26 +115,35 @@ const RollCallPage = () => {
         if (cachedList && cachedList.length > 0) {
           console.log('[RollCall] 使用本地缓存数据')
           setRollCallList(cachedList)
+
+          // 计算统计数据
+          const presentCount = cachedList.filter(item => item.status === 'present').length
+          const absentCount = cachedList.filter(item => item.status === 'absent').length
+          const notCheckedCount = cachedList.filter(item => !item.status).length
+
+          setStats({
+            date: selectedDate,
+            floor,
+            totalPeople: cachedList.length,
+            presentCount,
+            absentCount,
+            notCheckedCount
+          })
+
           Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
         } else {
           Taro.showToast({ title: '加载失败', icon: 'none' })
           setRollCallList([])
+          setStats({
+            date: selectedDate,
+            floor,
+            totalPeople: 0,
+            presentCount: 0,
+            absentCount: 0,
+            notCheckedCount: 0
+          })
         }
       }
-
-      // 计算统计数据
-      const presentCount = rollCallList.filter(item => item.status === 'present').length
-      const absentCount = rollCallList.filter(item => item.status === 'absent').length
-      const notCheckedCount = rollCallList.filter(item => !item.status).length
-
-      setStats({
-        date: selectedDate,
-        floor,
-        totalPeople: rollCallList.length,
-        presentCount,
-        absentCount,
-        notCheckedCount
-      })
     } catch (error) {
       console.error('[RollCall] 加载点名数据失败:', error)
       // 尝试从本地缓存加载

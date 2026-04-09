@@ -1,327 +1,260 @@
-# 微信小程序自动部署指南
+# 🚀 小程序部署指南
 
-本指南将帮助您设置小程序的 CI/CD 自动部署流程，实现代码提交后自动上传到微信平台。
+## 📦 部署前检查清单
 
----
+### ✅ 代码质量检查
+- [x] TypeScript 类型检查通过
+- [x] ESLint 代码规范检查通过
+- [x] 无未使用的导入
+- [x] 无类型错误
+- [x] 无警告信息
 
-## 📋 目录
+### ✅ 性能优化完成
+- [x] 移除废弃的服务器状态检查定时器
+- [x] 移除未使用的服务器状态相关代码
+- [x] 修复点名统计数据计算错误（使用实时数据而非旧状态）
+- [x] 清理不必要的导入和变量
 
-- [功能特性](#功能特性)
-- [准备工作](#准备工作)
-- [本地部署](#本地部署)
-- [GitHub Actions 自动部署](#github-actions-自动部署)
-- [常见问题](#常见问题)
+### ✅ 功能完整性验证
+- [x] 16 个云函数已创建
+- [x] 所有页面路由配置正确
+- [x] TabBar 配置正确
+- [x] 项目配置文件优化
 
----
-
-## ✨ 功能特性
-
-### 支持的部署方式
-
-1. **预览版部署** (`deploy:preview`)
-   - 快速上传预览版
-   - 生成预览二维码
-   - 适合开发测试
-
-2. **体验版部署** (`deploy:review`)
-   - 上传体验版
-   - 可分享给测试人员
-   - 适合内部测试
-
-3. **正式版部署** (`deploy:production`)
-   - 上传正式版
-   - 可选自动提交审核
-   - 适合发布上线
-
-### 自动化能力
-
-- ✅ 本地一键部署
-- ✅ GitHub Actions CI/CD
-- ✅ 版本号自动管理
-- ✅ 部署日志实时查看
-- ✅ 支持多机器人并发上传
+### ✅ 项目配置优化
+- [x] `project.config.json` 添加 `packOptions.ignore` 防止 assets 被打包
+- [x] 云函数根目录配置正确
+- [x] 编译选项优化
 
 ---
 
-## 🛠️ 准备工作
+## 📁 项目文件结构
 
-### 步骤 1：获取小程序 AppID
-
-1. 登录 [微信公众平台](https://mp.weixin.qq.com)
-2. 进入小程序后台
-3. 找到您的 AppID（如：`wxeb1d51afc9237cda`）
-
-### 步骤 2：获取上传密钥
-
-1. 打开 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
-2. 登录您的微信账号
-3. 点击右上角「设置」
-4. 进入「开发管理」→「开发设置」
-5. 找到「小程序代码上传」区域
-6. 点击「生成」按钮
-7. 下载私钥文件（保存为 `private.key`）
-
-**⚠️ 重要提示**：
-- 私钥文件只能下载一次，请妥善保管
-- 不要将私钥文件上传到公开仓库
-- 建议将私钥存放在环境变量或密钥管理服务中
-
-### 步骤 3：配置环境变量
-
-创建 `.env` 文件：
-
-```bash
-# 复制示例文件
-cp .env.example .env
 ```
-
-编辑 `.env` 文件，填写实际值：
-
-```env
-# 小程序 AppID
-MINIPROGRAM_APPID=wxeb1d51afc9237cda
-
-# 私钥文件路径
-MINIPROGRAM_PRIVATE_KEY_PATH=./private.key
-
-# 机器人版本号（可选）
-MINIPROGRAM_ROBOT_VERSION=1
-
-# 小程序版本号（可选，不填则自动生成）
-MINIPROGRAM_VERSION=1.0.0
-
-# 版本描述（可选）
-MINIPROGRAM_DESC=自动部署版本
-
-# 是否自动提交审核（可选）
-AUTO_SUBMIT_AUDIT=false
-```
-
-### 步骤 4：放置私钥文件
-
-将下载的 `private.key` 文件放在项目根目录。
-
-**⚠️ 安全提示**：
-- 将 `private.key` 添加到 `.gitignore`
-- 不要提交私钥文件到 Git 仓库
-
-在 `.gitignore` 中添加：
-
-```gitignore
-# 私钥文件
-private.key
-.env
+/workspace/projects/
+├── src/                          # 源代码目录
+│   ├── pages/                    # 页面目录
+│   │   ├── add-bed/             # 添加床位页面
+│   │   ├── checkin/             # 入住登记页面
+│   │   ├── checkout/            # 搬离登记页面
+│   │   ├── detail/              # 人员详情页面
+│   │   ├── floor/               # 楼层管理页面
+│   │   ├── import/              # 数据导入页面
+│   │   ├── login/               # 登录页面
+│   │   ├── qrcode/              # 二维码导出页面
+│   │   ├── rollcall/            # 点名管理页面
+│   │   └── test-cloud/          # 云函数测试页面
+│   ├── components/              # 组件目录
+│   │   └── ui/                  # UI 组件库
+│   ├── app.tsx                  # 应用入口
+│   ├── app.config.ts            # 应用配置
+│   └── app.css                  # 全局样式
+├── cloudfunctions/              # 云函数目录（16个）
+│   ├── addBed/
+│   ├── batchRollCall/
+│   ├── checkin/
+│   ├── checkout/
+│   ├── exportData/
+│   ├── getAllBeds/
+│   ├── getCheckinList/
+│   ├── getCheckoutList/
+│   ├── getFlaggedPeople/
+│   ├── getFloorStats/
+│   ├── getNanTwoBeds/
+│   ├── getNantwoFloorStats/
+│   ├── getNotificationCount/
+│   ├── getRollCallList/
+│   ├── getStats/
+│   └── markRollCall/
+├── project.config.json          # 项目配置
+├── package.json                 # 依赖配置
+└── README.md                    # 项目说明
 ```
 
 ---
 
-## 💻 本地部署
+## 🎯 微信开发者工具部署步骤
 
-### 方法 1：使用 npm scripts
+### 步骤 1：打开项目
+1. 打开微信开发者工具
+2. 选择"导入项目"
+3. 项目目录选择：`/workspace/projects/`
+4. AppID 使用：`wxeb1d51afc9237cda`（已配置）
+5. 项目名称：宿舍管理助手
+6. 点击"导入"
 
-**上传预览版：**
+### 步骤 2：配置 CloudBase
+1. 在项目根目录找到 `src/app.tsx`
+2. 找到第 14 行：
+   ```typescript
+   env: 'cloud1-7g1234567890', // TODO: 替换为您的 CloudBase 环境 ID
+   ```
+3. 替换为你的 CloudBase 环境 ID
+4. 保存文件
 
-```bash
-pnpm deploy:preview
-```
+### 步骤 3：创建数据库集合
+在微信开发者工具中：
+1. 点击"云开发"按钮
+2. 进入"数据库"标签
+3. 创建以下集合：
+   - `beds` - 床位信息
+   - `checkin_records` - 入住记录
+   - `checkout_records` - 搬离记录
+   - `rollcall_records` - 点名记录
 
-**上传体验版：**
+### 步骤 4：配置数据库权限
+对于每个集合，设置权限：
+- `beds`：仅创建者可读写
+- `checkin_records`：仅创建者可读写
+- `checkout_records`：仅创建者可读写
+- `rollcall_records`：仅创建者可读写
 
-```bash
-pnpm deploy:review
-```
+### 步骤 5：部署云函数
+在微信开发者工具中：
+1. 找到 `cloudfunctions` 文件夹
+2. 右键点击该文件夹
+3. 选择"上传并部署：云端安装依赖"
+4. 等待所有 16 个云函数部署完成（约 3-8 分钟）
 
-**上传正式版：**
+**云函数列表**：
+1. addBed - 添加床位
+2. batchRollCall - 批量点名
+3. checkin - 入住登记
+4. checkout - 搬离登记
+5. exportData - 数据导出
+6. getAllBeds - 获取所有床位
+7. getCheckinList - 获取入住列表
+8. getCheckoutList - 获取搬离列表
+9. getFlaggedPeople - 获取红名人员
+10. getFloorStats - 获取楼层统计
+11. getNanTwoBeds - 获取南二巷床位
+12. getNantwoFloorStats - 获取南二巷楼层统计
+13. getNotificationCount - 获取通知数量
+14. getRollCallList - 获取点名列表
+15. getStats - 获取全局统计
+16. markRollCall - 标记点名
 
-```bash
-pnpm deploy:upload
-# 或
-pnpm deploy:production
-```
+### 步骤 6：测试云函数
+在云开发控制台的"云函数"标签中：
+1. 点击每个云函数
+2. 选择"测试"
+3. 输入测试参数
+4. 点击"测试"按钮
+5. 检查返回结果
 
-### 方法 2：直接使用 Node.js
+### 步骤 7：编译预览
+在微信开发者工具中：
+1. 点击"编译"按钮
+2. 检查编译是否成功
+3. 查看控制台是否有错误
+4. 在模拟器中测试主要功能
 
-```bash
-node deploy.js preview      # 预览版
-node deploy.js review       # 体验版
-node deploy.js production   # 正式版
-```
-
-### 部署流程
-
-1. **编译项目**：自动执行 `pnpm build:weapp`
-2. **上传代码**：使用 miniprogram-ci 上传到微信平台
-3. **生成二维码**（体验版）：生成预览二维码
-4. **提交审核**（可选）：正式版可自动提交审核
-
-### 部署输出示例
-
-```
-==================================================
-🎯 微信小程序自动部署
-==================================================
-部署类型：preview
-版本号：1.0.0
-AppID：wxeb1d51afc9237cda
-==================================================
-🚀 开始上传预览版...
-正在上传...
-✅ 预览版上传成功！
-预览信息： { dev: '123456', expireTime: 1234567890 }
-==================================================
-🎉 部署完成！
-==================================================
-```
-
----
-
-## 🤖 GitHub Actions 自动部署
-
-### 方案 1：基于 Git 推送自动部署
-
-配置文件：`.github/workflows/deploy.yml`
-
-**触发条件**：
-- 推送到 `main` 分支
-- 创建 Pull Request
-- 手动触发（workflow_dispatch）
-
-### 方案 2：配置 GitHub Secrets
-
-在 GitHub 仓库中配置密钥：
-
-1. 进入仓库的「Settings」→「Secrets and variables」→「Actions」
-2. 点击「New repository secret」
-3. 添加以下密钥：
-
-| 密钥名称 | 说明 | 示例 |
-|---------|------|------|
-| `MINIPROGRAM_APPID` | 小程序 AppID | `wxeb1d51afc9237cda` |
-| `MINIPROGRAM_PRIVATE_KEY` | 私钥文件内容 | 直接粘贴私钥文本 |
-| `MINIPROGRAM_ROBOT_VERSION` | 机器人版本号 | `1` |
-| `AUTO_SUBMIT_AUDIT` | 是否自动提交审核 | `true` 或 `false` |
-
-**配置步骤**：
-
-1. **添加 AppID**
-
-   - Secret name: `MINIPROGRAM_APPID`
-   - Secret value: `wxeb1d51afc9237cda`
-
-2. **添加私钥**
-
-   - Secret name: `MINIPROGRAM_PRIVATE_KEY`
-   - Secret value: 打开 `private.key` 文件，复制全部内容粘贴
-
-3. **添加机器人版本号**（可选）
-
-   - Secret name: `MINIPROGRAM_ROBOT_VERSION`
-   - Secret value: `1`
-
-4. **添加自动审核设置**（可选）
-
-   - Secret name: `AUTO_SUBMIT_AUDIT`
-   - Secret value: `false`
-
-### 方案 3：手动触发部署
-
-在 GitHub 仓库页面：
-
-1. 进入「Actions」标签页
-2. 选择「Deploy WeChat Mini Program」工作流
-3. 点击「Run workflow」
-4. 选择部署类型：
-   - `preview`（预览版）
-   - `review`（体验版）
-   - `production`（正式版）
-5. 点击「Run workflow」按钮
-
-### 查看部署状态
-
-1. 进入「Actions」标签页
-2. 点击对应的工作流运行记录
-3. 查看实时日志
-4. 部署完成后可下载构建产物
+### 步骤 8：真机调试
+1. 点击"预览"按钮
+2. 扫描二维码
+3. 在真机上测试所有功能
 
 ---
 
-## ❓ 常见问题
+## 🧪 功能测试清单
 
-### Q1：部署失败，提示"私钥无效"
+### 基础功能
+- [ ] 页面加载正常
+- [ ] TabBar 切换正常
+- [ ] 下拉刷新正常
+- [ ] 页面跳转正常
 
-**原因**：私钥文件格式错误或路径不正确
+### 登录功能
+- [ ] 登录页面显示正常
+- [ ] 登录成功后状态保持
+- [ ] 退出登录功能正常
 
-**解决方案**：
-1. 检查私钥文件路径是否正确
-2. 确认私钥文件完整，没有多余的空格或换行
-3. 重新下载私钥文件
+### 添加床位
+- [ ] 南四巷添加床位成功
+- [ ] 南二巷添加床位成功
+- [ ] 上铺和下铺都创建成功
+- [ ] 重复添加提示正确
 
-### Q2：部署失败，提示"权限不足"
+### 入住登记
+- [ ] 南四巷入住登记成功
+- [ ] 南二巷入住登记成功
+- [ ] 床位状态更新正确
+- [ ] 人员信息保存正确
 
-**原因**：机器人版本号配置错误或权限不足
+### 搬离登记
+- [ ] 搬离登记成功
+- [ ] 床位状态恢复为空闲
+- [ ] 搬离记录保存正确
 
-**解决方案**：
-1. 检查 `MINIPROGRAM_ROBOT_VERSION` 是否正确
-2. 在微信开发者工具中确认机器人已启用
-3. 尝试使用其他机器人版本号（1-30）
+### 点名功能
+- [ ] 南四巷点名列表显示正确
+- [ ] 南二巷点名列表显示正确
+- [ ] 单人标记成功
+- [ ] 批量标记成功
+- [ ] 统计数据正确
 
-### Q3：上传成功，但无法预览
+### 楼层统计
+- [ ] 南四巷楼层统计正确
+- [ ] 南二巷楼层统计正确
+- [ ] 全局统计正确
 
-**原因**：版本号冲突或上传超时
+### 数据导出
+- [ ] 二维码导出功能正常
+- [ ] Excel 导出功能正常
 
-**解决方案**：
-1. 检查版本号是否已存在
-2. 使用新的版本号重新上传
-3. 检查网络连接是否正常
-
-### Q4：GitHub Actions 部署失败
-
-**原因**：GitHub Secrets 配置错误
-
-**解决方案**：
-1. 检查所有密钥是否正确配置
-2. 确认 `MINIPROGRAM_PRIVATE_KEY` 包含完整的私钥内容
-3. 查看工作流日志，定位具体错误
-
-### Q5：如何回滚到上一个版本？
-
-**解决方案**：
-1. 在微信开发者工具中，进入「版本管理」
-2. 在「开发版本」或「体验版本」中找到旧版本
-3. 点击「设为体验版」或「提交审核」
-
-### Q6：如何设置多机器人并发上传？
-
-**解决方案**：
-
-```env
-# 机器人 1
-MINIPROGRAM_ROBOT_VERSION=1
-
-# 机器人 2
-MINIPROGRAM_ROBOT_VERSION=2
-
-# ... 最多 30 个机器人
-```
+### 红名管理
+- [ ] 红名人员显示正确
+- [ ] 取消红名标记功能正常
+- [ ] 通知数量显示正确
 
 ---
 
-## 📚 参考资源
+## ⚠️ 常见问题
 
-- [miniprogram-ci 官方文档](https://developers.weixin.qq.com/miniprogram/dev/devtools/ci.html)
-- [Taro 框架文档](https://taro-docs.jd.com/)
-- [GitHub Actions 文档](https://docs.github.com/en/actions)
+### 1. 云函数部署失败
+**原因**：云函数根目录配置错误
+**解决**：检查 `project.config.json` 中的 `cloudfunctionRoot` 配置
+
+### 2. 数据库权限错误
+**原因**：数据库权限设置不正确
+**解决**：在云开发控制台中设置正确的数据库权限
+
+### 3. CloudBase 初始化失败
+**原因**：环境 ID 配置错误
+**解决**：检查 `src/app.tsx` 中的环境 ID 是否正确
+
+### 4. 页面白屏
+**原因**：代码错误或配置问题
+**解决**：检查控制台错误日志，使用 `pnpm validate` 检查代码
+
+### 5. 云函数调用失败
+**原因**：云函数未部署或部署失败
+**解决**：在云开发控制台检查云函数状态，重新部署
 
 ---
 
-## 🆘 需要帮助？
+## 📊 性能优化记录
 
-如果遇到问题，请：
+### 已完成的优化
+1. ✅ 移除废弃的服务器状态检查定时器（减少不必要的网络请求）
+2. ✅ 清理未使用的导入和变量（减少包体积）
+3. ✅ 修复点名统计数据计算错误（使用实时数据）
+4. ✅ 优化项目配置（防止 assets 被打包）
 
-1. 检查部署日志
-2. 查看常见问题部分
-3. 提交 Issue 反馈问题
+### 性能指标
+- TypeScript 检查：✅ 通过
+- ESLint 检查：✅ 通过
+- 无类型错误：✅
+- 无警告信息：✅
 
 ---
 
-**祝部署顺利！🎉**
+## 🎉 部署完成
+
+部署完成后，你应该能够：
+1. 在微信开发者工具中正常预览小程序
+2. 使用所有功能（添加床位、入住登记、搬离登记、点名等）
+3. 数据正确保存到 CloudBase 数据库
+4. 云函数正常响应请求
+
+**祝你使用愉快！** 🎊
