@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus, Download } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
 import { Network } from '@/network'
 import { Cloud } from '@/cloud'
 import './index.css'
@@ -535,18 +535,6 @@ const FloorPage = () => {
               >
                 <Plus size={16} color="#2563eb" />
                 <Text className="text-xs" style={{ color: '#2563eb' }}>添加床位</Text>
-              </View>
-            )}
-
-            {/* 导出数据按钮 */}
-            {isLoggedIn && (
-              <View
-                className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
-                style={{ backgroundColor: '#dcfce7' }}
-                onClick={() => Taro.navigateTo({ url: '/pages/auto-export/index' })}
-              >
-                <Download size={16} color="#16a34a" />
-                <Text className="text-xs" style={{ color: '#16a34a' }}>一键导出</Text>
               </View>
             )}
           </View>
