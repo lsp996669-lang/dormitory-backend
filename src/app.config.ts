@@ -12,6 +12,7 @@ export default defineAppConfig({
     'pages/add-bed/index',
     'pages/temp-file-url/index',
     'pages/auto-export/index',
+    'pages/download-app/index',
   ],
   window: {
     backgroundTextStyle: 'light',

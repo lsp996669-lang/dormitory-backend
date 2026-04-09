@@ -1,0 +1,8 @@
+{
+  "name": "uploadAppPackage",
+  "version": "1.0.0",
+  "description": "上传小程序包到云存储",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {}
+}
