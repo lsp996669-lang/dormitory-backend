@@ -10,10 +10,6 @@ export default defineAppConfig({
     'pages/import/index',
     'pages/test-cloud/index',
     'pages/add-bed/index',
-    'pages/temp-file-url/index',
-    'pages/auto-export/index',
-    'pages/download-app/index',
-    'pages/deploy-download/index',
   ],
   window: {
     backgroundTextStyle: 'light',

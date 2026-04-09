@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus, Download } from 'lucide-react-taro'
 import { Network } from '@/network'
 import { Cloud } from '@/cloud'
 import './index.css'
@@ -482,6 +482,70 @@ const FloorPage = () => {
   }
 
   // 导出数据
+  const handleExportData = async () => {
+    if (!isLoggedIn) {
+      Taro.showToast({ title: '请先登录', icon: 'none' })
+      return
+    }
+
+    try {
+      Taro.showLoading({ title: '正在导出...', mask: true })
+
+      console.log('[导出] 调用 exportData 云函数')
+      const res = await Cloud.callFunction('exportData', {})
+
+      console.log('[导出] 云函数响应:', res)
+
+      if (res.result?.code === 200 && res.result.data?.fileID) {
+        const fileID = res.result.data.fileID
+
+        // 下载文件
+        const downloadRes = await Taro.cloud.downloadFile({
+          fileID: fileID
+        })
+
+        console.log('[导出] 下载结果:', downloadRes)
+
+        if (downloadRes.tempFilePath) {
+          // 保存文件到本地
+          const savedRes = await Taro.saveFile({
+            tempFilePath: downloadRes.tempFilePath
+          })
+
+          console.log('[导出] 保存结果:', savedRes)
+
+          Taro.hideLoading()
+
+          // 打开文件
+          await Taro.openDocument({
+            filePath: (savedRes as any).savedFilePath,
+            showMenu: true,
+            success: () => {
+              console.log('[导出] 文件打开成功')
+            },
+            fail: (err) => {
+              console.error('[导出] 文件打开失败:', err)
+            }
+          })
+
+          Taro.showToast({ title: '导出成功', icon: 'success' })
+        } else {
+          throw new Error('文件下载失败')
+        }
+      } else {
+        throw new Error(res.result?.msg || '导出失败')
+      }
+    } catch (error: any) {
+      Taro.hideLoading()
+      console.error('[导出] 导出失败:', error)
+      Taro.showToast({
+        title: error.message || '导出失败',
+        icon: 'none',
+        duration: 3000
+      })
+    }
+  }
+
   return (
     <View className="min-h-screen bg-gray-50 p-4">
       <View className="mb-4">
@@ -535,6 +599,18 @@ const FloorPage = () => {
               >
                 <Plus size={16} color="#2563eb" />
                 <Text className="text-xs" style={{ color: '#2563eb' }}>添加床位</Text>
+              </View>
+            )}
+
+            {/* 导出数据按钮 */}
+            {isLoggedIn && (
+              <View
+                className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
+                style={{ backgroundColor: '#dcfce7' }}
+                onClick={handleExportData}
+              >
+                <Download size={16} color="#16a34a" />
+                <Text className="text-xs" style={{ color: '#16a34a' }}>导出数据</Text>
               </View>
             )}
           </View>
