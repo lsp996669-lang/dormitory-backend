@@ -11,8 +11,9 @@
 ## 🎯 快速操作
 
 ### 添加床位
-- 南二巷201房添加3号床：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
-- 其他房间添加床位：使用云开发控制台或测试页面
+- **小程序添加床位**：登录后在楼层页面点击「添加床位」按钮，或查看 [ADD_BED_FEATURE_GUIDE.md](./ADD_BED_FEATURE_GUIDE.md)
+- **南二巷201房添加3号床**：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
+- 其他房间添加床位：使用小程序添加功能或云开发控制台
 
 ### 常见问题
 - 为什么只显示2个床？查看 [WHY_ONLY_2_BEDS.md](./WHY_ONLY_2_BEDS.md)
@@ -30,9 +31,10 @@
 - **工程化**: Vite 4.2.0
 - **包管理**: pnpm
 - **运行时**: Node.js >= 18
-- **服务端**: NestJS 10.4.15
-- **数据库 ORM**: Drizzle ORM 0.45.1
-- **类型校验**: Zod 4.3.5
+- **后端服务**: 微信云开发（云函数 + 云数据库 + 云存储）
+- **数据导入导出**: exceljs 4.4.0
+
+> **注意**：本项目后端已从 NestJS 迁移到微信云开发。云函数代码位于 `cloudfunctions/` 目录。
 
 ## 项目结构
 
@@ -73,36 +75,88 @@ pnpm install
 
 ### 本地开发
 
-同时启动 H5 前端和 NestJS 后端：
+启动前端开发：
 
 ```bash
 pnpm dev
 ```
 
 - 前端地址：http://localhost:5000
-- 后端地址：http://localhost:3000
+- 小程序编译输出：dist-weapp/
 
-单独启动：
-
-```bash
-pnpm dev:web      # 仅 H5 前端
-pnpm dev:weapp    # 仅微信小程序
-pnpm dev:server   # 仅后端服务
-```
+注意：本项目使用微信云开发作为后端，无需单独启动后端服务。云函数和云数据库在微信开发者工具中运行。
 
 ### 构建
 
 ```bash
-pnpm build        # 构建所有（H5 + 小程序 + 后端）
+pnpm build        # 构建 H5 和小程序
 pnpm build:web    # 仅构建 H5，输出到 dist-web
-pnpm build:weapp  # 仅构建微信小程序，输出到 dist
-pnpm build:server # 仅构建后端
+pnpm build:weapp  # 仅构建微信小程序，输出到 dist-weapp
 ```
 
 ### 预览小程序
 
 ```bash
 pnpm preview:weapp # 构建并生成预览小程序二维码
+```
+
+## ☁️ 微信云开发配置
+
+本项目使用微信云开发作为后端服务，包括云函数、云数据库和云存储。
+
+### 快速配置
+
+查看 [CLOUD_SETUP_GUIDE.md](./CLOUD_SETUP_GUIDE.md) 了解详细的云开发配置步骤。
+
+### 云函数列表
+
+项目包含以下 6 个云函数（位于 `cloudfunctions/` 目录）：
+
+1. **checkin** - 入住登记
+2. **checkout** - 搬离登记
+3. **getCheckinList** - 获取入住列表
+4. **getCheckoutList** - 获取搬离列表
+5. **exportData** - 导出数据
+6. **addBed** - 添加床位
+
+### 云数据库集合
+
+- **beds** - 床位信息表
+- **checkin_records** - 入住记录表
+- **checkout_records** - 搬离记录表
+
+### 云存储目录
+
+- **exports** - 导出文件存储目录
+  - checkin/ - 入住数据导出
+  - checkout/ - 搬离数据导出
+  - temp/ - 临时文件
+
+### 云函数调用示例
+
+```typescript
+// 在前端代码中调用云函数
+import Taro from '@tarojs/taro'
+
+const result = await Taro.cloud.callFunction({
+  name: 'checkin',
+  data: {
+    dormitory: '南四巷180号',
+    floor: '2',
+    room: '201',
+    position: 'upper',
+    bed_number: '1',
+    person_name: '张三',
+    person_id: '110101199001011234',
+    phone: '13800138000',
+    checkin_time: '2024-04-09 12:00:00',
+    payment_type: '公司支付',
+    payment_amount: 500,
+    remark: '测试入住'
+  }
+})
+
+console.log(result.result)
 ```
 
 ## 🚀 自动部署
@@ -582,223 +636,96 @@ async function getLocation(): Promise<Taro.getLocation.SuccessCallbackResult> {
 }
 ```
 
-## 后端核心开发规范
+## 云函数开发规范
 
-本项目后端基于 NestJS + TypeScript 构建，提供高效、可扩展的服务端能力。
+本项目后端使用微信云开发（云函数），代码位于 `cloudfunctions/` 目录。
 
-### 项目结构
-
-```sh
-.
-├── server/                   # NestJS 后端服务
-│   └── src/
-│       ├── main.ts           # 服务入口
-│       ├── app.module.ts     # 根模块
-│       ├── app.controller.ts # 根控制器
-│       └── app.service.ts    # 根服务
-```
-
-### 开发命令
+### 云函数结构
 
 ```sh
-pnpm dev:server // 启动开发服务 (热重载, 默认端口 3000)
-pnpm build:server // 构建生产版本
+cloudfunctions/
+├── checkin/           # 入住登记
+│   ├── index.js       # 云函数入口
+│   ├── package.json   # 依赖配置
+│   └── config.json    # 云函数配置
+├── checkout/          # 搬离登记
+├── getCheckinList/    # 获取入住列表
+├── getCheckoutList/   # 获取搬离列表
+├── exportData/        # 导出数据
+└── addBed/            # 添加床位
 ```
 
-### 新建模块流程 (CLI)
-
-快速生成样板代码：
+### 云函数开发命令
 
 ```bash
-cd server
+# 上传云函数（在微信开发者工具中操作）
+# 右键点击云函数文件夹 -> 上传并部署：云端安装依赖
 
-# 生成完整的 CRUD 资源 (包含 Module, Controller, Service, DTO, Entity)
-npx nest g resource modules/product
-
-# 仅生成特定部分
-npx nest g module modules/order
-npx nest g controller modules/order
-npx nest g service modules/order
+# 云函数调试
+# 在微信开发者工具中，点击「云开发」->「云函数」-> 选择云函数 -> 「云端测试」
 ```
 
-### 环境变量配置
+### 云函数示例
 
-在 server/ 根目录创建 .env 文件：
+```javascript
+// cloudfunctions/checkin/index.js
+const cloud = require('wx-server-sdk')
 
-```sh
-## 服务端口
-PORT=3000
+cloud.init({
+  env: cloud.DYNAMIC_CURRENT_ENV
+})
 
-## 微信小程序配置
-WX_APP_ID=你的AppID
-WX_APP_SECRET=你的AppSecret
+const db = cloud.database()
 
-## JWT 密钥
-JWT_SECRET=your-super-secret-key
-```
+exports.main = async (event, context) => {
+  const { dormitory, floor, room, position, bed_number, person_name } = event
 
-在代码中使用 @nestjs/config 读取环境变量：
+  // 业务逻辑处理
+  // ...
 
-```typescript
-import { ConfigService } from '@nestjs/config';
-
-// 在 Service 中注入
-constructor(private configService: ConfigService) {}
-
-getWxConfig() {
   return {
-    appId: this.configService.get<string>('WX_APP_ID'),
-    secret: this.configService.get<string>('WX_APP_SECRET'),
-  };
-}
-```
-
-### 标准响应封装
-
-建议使用拦截器 (Interceptor) 统一 API 响应格式：
-
-```typeScript
-// src/common/interceptors/transform.interceptor.ts
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-
-export interface Response<T> {
-  code: number;
-  data: T;
-  message: string;
-}
-
-@Injectable()
-export class TransformInterceptor<T> implements NestInterceptor<T, Response<T>> {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<Response<T>> {
-    return next.handle().pipe(
-      map((data) => ({
-        code: 200,
-        data,
-        message: 'success',
-      })),
-    );
+    code: 200,
+    msg: '成功',
+    data: { /* ... */ }
   }
 }
 ```
 
-在 main.ts 中全局注册：
+### 云数据库操作
 
-```typescript
-app.useGlobalInterceptors(new TransformInterceptor());
-```
-
-### 微信登录后端实现
-
-```typescript
-// src/modules/auth/auth.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { ConfigService } from '@nestjs/config';
-import { lastValueFrom } from 'rxjs';
-
-@Injectable()
-export class AuthService {
-  constructor(
-    private httpService: HttpService,
-    private configService: ConfigService,
-  ) {}
-
-  async code2Session(code: string) {
-    const appId = this.configService.get('WX_APP_ID');
-    const secret = this.configService.get('WX_APP_SECRET');
-    const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appId}&secret=${secret}&js_code=${code}&grant_type=authorization_code`;
-
-    const { data } = await lastValueFrom(this.httpService.get(url));
-
-    if (data.errcode) {
-      throw new UnauthorizedException(`微信登录失败: ${data.errmsg}`);
-    }
-
-    return data; // 包含 openid, session_key
+```javascript
+// 添加记录
+await db.collection('beds').add({
+  data: {
+    dormitory: '南四巷180号',
+    floor: '2',
+    room: '201',
+    position: 'upper',
+    bed_number: '1',
+    status: 'empty',
+    created_at: new Date().toISOString()
   }
-}
-```
+})
 
-### 异常处理
+// 查询记录
+const result = await db.collection('beds')
+  .where({
+    dormitory: '南四巷180号',
+    floor: '2'
+  })
+  .get()
 
-使用全局异常过滤器 (Filter) 统一错误响应：
-
-```typescript
-// src/common/filters/http-exception.filter.ts
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
-import { Response } from 'express';
-
-@Catch(HttpException)
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const status = exception.getStatus();
-    const exceptionResponse = exception.getResponse();
-
-    response.status(status).json({
-      code: status,
-      message: typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as any).message,
-      data: null,
-    });
+// 更新记录
+await db.collection('beds').doc('record-id').update({
+  data: {
+    status: 'occupied'
   }
-}
+})
+
+// 删除记录
+await db.collection('beds').doc('record-id').remove()
 ```
 
-在 main.ts 中注册：
+详细的云开发配置指南请查看 [CLOUD_SETUP_GUIDE.md](./CLOUD_SETUP_GUIDE.md)。
 
-```
-app.useGlobalFilters(new HttpExceptionFilter());
-```
-
-### 数据库 (Drizzle ORM)
-
-推荐使用 [Drizzle ORM](https://orm.drizzle.team/)，已预安装。
-
-### 类型校验 (Zod)
-
-项目集成了 [Zod](https://zod.dev/) 用于运行时类型校验。
-
-#### 定义 Schema
-
-```typescript
-import { z } from 'zod';
-
-// 基础类型
-const userSchema = z.object({
-  id: z.number(),
-  name: z.string().min(1).max(50),
-  email: z.string().email(),
-  age: z.number().int().positive().optional(),
-});
-
-// 从 schema 推导 TypeScript 类型
-type User = z.infer<typeof userSchema>;
-```
-
-#### 请求校验
-
-```typescript
-// src/modules/user/dto/create-user.dto.ts
-import { z } from 'zod';
-
-export const createUserSchema = z.object({
-  nickname: z.string().min(1, '昵称不能为空').max(20, '昵称最多20个字符'),
-  avatar: z.string().url('头像必须是有效的URL').optional(),
-  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确').optional(),
-});
-
-export type CreateUserDto = z.infer<typeof createUserSchema>;
-
-// 在 Controller 中使用
-@Post()
-create(@Body() body: unknown) {
-  const result = createUserSchema.safeParse(body);
-  if (!result.success) {
-    throw new BadRequestException(result.error.errors);
-  }
-  return this.userService.create(result.data);
-}
-```
+> **注意**：本项目已从 NestJS 迁移到微信云开发。原有的 NestJS 后端代码已废弃，请使用云函数实现业务逻辑。

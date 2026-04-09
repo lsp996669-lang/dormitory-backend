@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
 import { Network } from '@/network'
 import './index.css'
 
@@ -518,38 +518,52 @@ const FloorPage = () => {
             <Text className="text-2xl font-bold text-gray-800 block">宿舍管理</Text>
             <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住登记</Text>
           </View>
-          {/* 用户登录状态 */}
-          <View 
-            className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
-            style={{ backgroundColor: isLoggedIn ? '#dcfce7' : '#fef3c7' }}
-            onClick={() => {
-              if (isLoggedIn) {
-                Taro.showModal({
-                  title: '提示',
-                  content: '确定要退出登录吗？',
-                  success: (res) => {
-                    if (res.confirm) {
-                      Taro.removeStorageSync('userInfo')
-                      setIsLoggedIn(false)
-                      Taro.showToast({ title: '已退出登录', icon: 'success' })
+          <View className="flex items-center gap-2">
+            {/* 用户登录状态 */}
+            <View
+              className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
+              style={{ backgroundColor: isLoggedIn ? '#dcfce7' : '#fef3c7' }}
+              onClick={() => {
+                if (isLoggedIn) {
+                  Taro.showModal({
+                    title: '提示',
+                    content: '确定要退出登录吗？',
+                    success: (res) => {
+                      if (res.confirm) {
+                        Taro.removeStorageSync('userInfo')
+                        setIsLoggedIn(false)
+                        Taro.showToast({ title: '已退出登录', icon: 'success' })
+                      }
                     }
-                  }
-                })
-              } else {
-                Taro.navigateTo({ url: '/pages/login/index' })
-              }
-            }}
-          >
-            {isLoggedIn ? (
-              <>
-                <User size={16} color="#16a34a" />
-                <Text className="text-xs" style={{ color: '#16a34a' }}>已登录</Text>
-              </>
-            ) : (
-              <>
-                <User size={16} color="#d97706" />
-                <Text className="text-xs" style={{ color: '#d97706' }}>点击登录</Text>
-              </>
+                  })
+                } else {
+                  Taro.navigateTo({ url: '/pages/login/index' })
+                }
+              }}
+            >
+              {isLoggedIn ? (
+                <>
+                  <User size={16} color="#16a34a" />
+                  <Text className="text-xs" style={{ color: '#16a34a' }}>已登录</Text>
+                </>
+              ) : (
+                <>
+                  <User size={16} color="#d97706" />
+                  <Text className="text-xs" style={{ color: '#d97706' }}>点击登录</Text>
+                </>
+              )}
+            </View>
+
+            {/* 添加床位按钮 */}
+            {isLoggedIn && (
+              <View
+                className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
+                style={{ backgroundColor: '#dbeafe' }}
+                onClick={() => Taro.navigateTo({ url: '/pages/add-bed/index' })}
+              >
+                <Plus size={16} color="#2563eb" />
+                <Text className="text-xs" style={{ color: '#2563eb' }}>添加床位</Text>
+              </View>
             )}
           </View>
         </View>

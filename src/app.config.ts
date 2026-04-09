@@ -9,6 +9,7 @@ export default defineAppConfig({
     'pages/rollcall/index',
     'pages/import/index',
     'pages/test-cloud/index',
+    'pages/add-bed/index',
   ],
   window: {
     backgroundTextStyle: 'light',
