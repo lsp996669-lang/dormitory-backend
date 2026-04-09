@@ -2,13 +2,20 @@
 
 这是一个基于 [Taro 4](https://docs.taro.zone/docs/) 的微信小程序，使用**微信云开发**提供后端服务。
 
-> **重要提示**：本项目已从 NestJS 后端迁移到微信云开发。请查看 [CLOUD_SETUP.md](./CLOUD_SETUP.md) 了解如何设置和使用云开发。
+> **重要提示**：本项目已从 NestJS 后端迁移到微信云开发。请查看 [CLOUD_SETUP_GUIDE.md](./CLOUD_SETUP_GUIDE.md) 了解如何设置和使用云开发。
 >
-> **快速修复网络问题**：查看 [QUICK_FIX.md](./QUICK_FIX.md)
+> **快速修复**：
+> - 网络问题：查看 [QUICK_FIX.md](./QUICK_FIX.md)
+> - 云开发环境错误：查看 [FIX_CLOUD_ENV_ERROR.md](./FIX_CLOUD_ENV_ERROR.md)（最快解决）
+> - 添加床位：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
 >
-> **添加床位**：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
+> **📚 完整文档索引**：查看 [DOCS_INDEX.md](./DOCS_INDEX.md) 获取所有文档列表和问题解决方案
 
 ## 🎯 快速操作
+
+### 云开发配置
+- **云开发环境错误**：点击这里查看 [FIX_CLOUD_ENV_ERROR.md](./FIX_CLOUD_ENV_ERROR.md) 快速修复
+- **完整配置指南**：查看 [CLOUD_SETUP_GUIDE.md](./CLOUD_SETUP_GUIDE.md)
 
 ### 添加床位
 - **小程序添加床位**：登录后在楼层页面点击「添加床位」按钮，或查看 [ADD_BED_FEATURE_GUIDE.md](./ADD_BED_FEATURE_GUIDE.md)
@@ -17,6 +24,8 @@
 
 ### 常见问题
 - 为什么只显示2个床？查看 [WHY_ONLY_2_BEDS.md](./WHY_ONLY_2_BEDS.md)
+- 云开发环境错误"请选择云环境"：查看 [FIX_CLOUD_ENV_ERROR.md](./FIX_CLOUD_ENV_ERROR.md)（3步快速修复）
+- 小程序无法连接网络：查看 [FIX_NETWORK_ISSUE.md](./FIX_NETWORK_ISSUE.md)
 - 初始化所有床位：查看 [init-nantwo-beds.js](./init-nantwo-beds.js)
 
 ## 技术栈
