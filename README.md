@@ -3,6 +3,16 @@
 这是一个基于 [Taro 4](https://docs.taro.zone/docs/) 的微信小程序，使用**微信云开发**提供后端服务。
 
 > **重要提示**：本项目已从 NestJS 后端迁移到微信云开发。请查看 [CLOUD_SETUP.md](./CLOUD_SETUP.md) 了解如何设置和使用云开发。
+>
+> **快速修复网络问题**：查看 [QUICK_FIX.md](./QUICK_FIX.md)
+>
+> **添加床位**：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
+
+## 🎯 快速操作
+
+### 添加床位
+- 南二巷201房添加3号床：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
+- 其他房间添加床位：使用云开发控制台或测试页面
 
 ## 技术栈
 
