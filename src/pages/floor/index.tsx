@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
-import { Cloud } from '@/cloud'
+import { Network } from '@/network'
 import './index.css'
 
 interface FloorStats {
@@ -146,16 +146,15 @@ const FloorPage = () => {
   // 加载南二巷楼层统计
   const loadNanTwoFloorStats = async () => {
     try {
-      const res = await Cloud.callFunction({
-        name: 'getNantwoFloorStats',
-        data: {}
+      const res = await Network.request({
+        url: '/api/floors/nantwo/floor-stats'
       })
-      if (res.result.code === 200 && res.result.data) {
-        setNanTwoFloorStats(res.result.data)
+      if (res.data?.code === 200 && res.data?.data) {
+        setNanTwoFloorStats(res.data.data)
         // 计算总计
-        const total = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
-        const occupied = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
-        const maintenance = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
+        const total = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
+        const occupied = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
+        const maintenance = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
         setNanTwoStats({
           totalBeds: total,
           occupiedBeds: occupied,
@@ -171,13 +170,12 @@ const FloorPage = () => {
   // 加载所有入住人员数据（用于前端搜索）
   const loadAllResidents = async () => {
     try {
-      const res = await Cloud.callFunction({
-        name: 'getCheckinList',
-        data: {}
+      const res = await Network.request({
+        url: '/api/checkin/list'
       })
-      if (res.result.code === 200 && res.result.data) {
-        setAllResidents(res.result.data)
-        console.log('[Floor] 加载入住人员数据:', res.result.data.length, '条')
+      if (res.data?.code === 200 && res.data?.data) {
+        setAllResidents(res.data.data)
+        console.log('[Floor] 加载入住人员数据:', res.data.data.length, '条')
       }
     } catch (error) {
       console.error('[Floor] 加载入住人员数据失败:', error)
@@ -187,23 +185,39 @@ const FloorPage = () => {
   // 加载红名人员列表
   const loadFlaggedPeople = async () => {
     try {
-      const res = await Cloud.callFunction({
-        name: 'getFlaggedPeople',
-        data: {}
+      const res = await Network.request({
+        url: '/api/checkin/flagged'
       })
-      if (res.result.code === 200 && res.result.data) {
-        setFlaggedPeople(res.result.data)
-        console.log('[Floor] 加载红名人员:', res.result.data.length, '条')
+      if (res.data?.code === 200 && res.data?.data) {
+        setFlaggedPeople(res.data.data)
+        console.log('[Floor] 加载红名人员:', res.data.data.length, '条')
       }
     } catch (error) {
       console.error('[Floor] 加载红名人员失败:', error)
     }
   }
 
-  // 取消红名标记（TODO: 需要 toggleFlag 云函数）
+  // 取消红名标记
   const handleUnflag = async (checkInId: number, e: any) => {
     e.stopPropagation()
-    Taro.showToast({ title: '此功能暂不支持', icon: 'none' })
+    try {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-flag',
+        method: 'POST',
+        data: { checkInId }
+      })
+      if (res.data?.code === 200) {
+        Taro.showToast({ title: '已取消标记', icon: 'success' })
+        // 刷新红名人员列表
+        loadFlaggedPeople()
+        // 刷新楼层统计（可能有变化）
+        loadFloorStats()
+        loadNanTwoFloorStats()
+      }
+    } catch (error) {
+      console.error('[Floor] 取消红名标记失败:', error)
+      Taro.showToast({ title: '取消标记失败', icon: 'none' })
+    }
   }
 
   const loadFloorStats = async () => {
@@ -211,9 +225,8 @@ const FloorPage = () => {
     try {
       console.log('[Floor] 开始加载楼层统计数据...')
       
-      const res = await Cloud.callFunction({
-        name: 'getFloorStats',
-        data: {}
+      const res = await Network.request({
+        url: '/api/floors/stats'
       })
 
       console.log('[Floor] 楼层统计响应:', res)
@@ -235,9 +248,9 @@ const FloorPage = () => {
         return
       }
 
-      if (res.result.code === 200 && res.result.data) {
+      if (res.data?.code === 200 && res.data?.data) {
         // 过滤掉1楼，只显示2-4楼
-        const floors = res.result.data.filter((f: FloorStats) => f.floor >= 2)
+        const floors = res.data.data.filter((f: FloorStats) => f.floor >= 2)
         console.log(`[Floor] 过滤后的楼层数据: ${floors.length} 个楼层`)
         setFloorStats(floors)
         // 保存到本地缓存
@@ -273,12 +286,11 @@ const FloorPage = () => {
 
   const loadNotificationCount = async () => {
     try {
-      const res = await Cloud.callFunction({
-        name: 'getNotificationCount',
-        data: {}
+      const res = await Network.request({
+        url: '/api/notification/count'
       })
-      if (res.result.code === 200) {
-        setNotificationCount(res.result.data?.count || 0)
+      if (res.data?.code === 200) {
+        setNotificationCount(res.data.data?.count || 0)
       }
     } catch (error) {
       console.error('加载通知数量失败:', error)
@@ -286,9 +298,13 @@ const FloorPage = () => {
   }
 
   const loadNotifications = async () => {
-    // TODO: 需要 getNotificationList 云函数
     try {
-      setNotifications([])
+      const res = await Network.request({
+        url: '/api/notification/list'
+      })
+      if (res.data?.code === 200) {
+        setNotifications(res.data.data || [])
+      }
     } catch (error) {
       console.error('加载通知列表失败:', error)
       setNotifications([])
@@ -431,13 +447,12 @@ const FloorPage = () => {
     if (!res.confirm) return
 
     try {
-          // TODO: 需要 clearNotification 云函数
-      // const response = await Cloud.callFunction({
-      //   name: 'clearNotification',
-      //   data: {}
-      // })
-      // if (response.result?.code === 200) {
-        Taro.showToast({ title: '功能暂不支持', icon: 'none' })
+      const response = await Network.request({
+        url: '/api/notification/clear',
+        method: 'POST'
+      })
+      if (response.data?.code === 200) {
+        Taro.showToast({ title: '已清空', icon: 'success' })
         setNotifications([])
         setNotificationCount(0)
         setShowNotifications(false)
