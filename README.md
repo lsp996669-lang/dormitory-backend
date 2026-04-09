@@ -14,6 +14,10 @@
 - 南二巷201房添加3号床：查看 [QUICK_ADD_BED.md](./QUICK_ADD_BED.md)
 - 其他房间添加床位：使用云开发控制台或测试页面
 
+### 常见问题
+- 为什么只显示2个床？查看 [WHY_ONLY_2_BEDS.md](./WHY_ONLY_2_BEDS.md)
+- 初始化所有床位：查看 [init-nantwo-beds.js](./init-nantwo-beds.js)
+
 ## 技术栈
 
 - **整体框架**: Taro 4.1.9
