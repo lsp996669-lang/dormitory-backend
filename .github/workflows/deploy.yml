@@ -1,0 +1,75 @@
+name: Deploy WeChat Mini Program
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: '部署类型'
+        required: true
+        type: choice
+        options:
+          - preview
+          - review
+          - production
+        default: 'preview'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Validate
+        run: pnpm validate
+
+      - name: Build
+        run: pnpm build:weapp
+
+      - name: Create private key file
+        env:
+          PRIVATE_KEY: ${{ secrets.MINIPROGRAM_PRIVATE_KEY }}
+        run: |
+          echo "$PRIVATE_KEY" > private.key
+          chmod 600 private.key
+
+      - name: Deploy
+        env:
+          MINIPROGRAM_APPID: ${{ secrets.MINIPROGRAM_APPID }}
+          MINIPROGRAM_PRIVATE_KEY_PATH: ./private.key
+          MINIPROGRAM_ROBOT_VERSION: ${{ secrets.MINIPROGRAM_ROBOT_VERSION || '1' }}
+          MINIPROGRAM_VERSION: ${{ github.run_number }}
+          MINIPROGRAM_DESC: "自动部署 - ${{ github.event.head_commit.message }}"
+          AUTO_SUBMIT_AUDIT: ${{ secrets.AUTO_SUBMIT_AUDIT || 'false' }}
+        run: |
+          DEPLOY_TYPE="${{ github.event.inputs.deploy_type || 'preview' }}"
+          node deploy.js "$DEPLOY_TYPE"
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-result
+          path: |
+            dist-weapp/
+            qrcode.jpg
+          retention-days: 7
