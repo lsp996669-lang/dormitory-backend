@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus } from 'lucide-react-taro'
 import { Network } from '@/network'
+import { Cloud } from '@/cloud'
 import './index.css'
 
 interface FloorStats {
@@ -146,15 +147,13 @@ const FloorPage = () => {
   // 加载南二巷楼层统计
   const loadNanTwoFloorStats = async () => {
     try {
-      const res = await Network.request({
-        url: '/api/floors/nantwo/floor-stats'
-      })
-      if (res.data?.code === 200 && res.data?.data) {
-        setNanTwoFloorStats(res.data.data)
+      const res = await Cloud.callFunction('getNantwoFloorStats', {})
+      if (res.result.code === 200 && res.result.data) {
+        setNanTwoFloorStats(res.result.data)
         // 计算总计
-        const total = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
-        const occupied = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
-        const maintenance = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
+        const total = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
+        const occupied = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
+        const maintenance = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
         setNanTwoStats({
           totalBeds: total,
           occupiedBeds: occupied,
@@ -170,12 +169,10 @@ const FloorPage = () => {
   // 加载所有入住人员数据（用于前端搜索）
   const loadAllResidents = async () => {
     try {
-      const res = await Network.request({
-        url: '/api/checkin/list'
-      })
-      if (res.data?.code === 200 && res.data?.data) {
-        setAllResidents(res.data.data)
-        console.log('[Floor] 加载入住人员数据:', res.data.data.length, '条')
+      const res = await Cloud.callFunction('getCheckinList', {})
+      if (res.result.code === 200 && res.result.data) {
+        setAllResidents(res.result.data)
+        console.log('[Floor] 加载入住人员数据:', res.result.data.length, '条')
       }
     } catch (error) {
       console.error('[Floor] 加载入住人员数据失败:', error)
@@ -185,12 +182,10 @@ const FloorPage = () => {
   // 加载红名人员列表
   const loadFlaggedPeople = async () => {
     try {
-      const res = await Network.request({
-        url: '/api/checkin/flagged'
-      })
-      if (res.data?.code === 200 && res.data?.data) {
-        setFlaggedPeople(res.data.data)
-        console.log('[Floor] 加载红名人员:', res.data.data.length, '条')
+      const res = await Cloud.callFunction('getFlaggedPeople', {})
+      if (res.result.code === 200 && res.result.data) {
+        setFlaggedPeople(res.result.data)
+        console.log('[Floor] 加载红名人员:', res.result.data.length, '条')
       }
     } catch (error) {
       console.error('[Floor] 加载红名人员失败:', error)
@@ -201,12 +196,20 @@ const FloorPage = () => {
   const handleUnflag = async (checkInId: number, e: any) => {
     e.stopPropagation()
     try {
-      const res = await Network.request({
-        url: '/api/checkin/toggle-flag',
-        method: 'POST',
+      // TODO: 需要创建 toggleFlag 云函数
+      Taro.showToast({
+        title: '功能开发中',
+        icon: 'none',
+        duration: 2000
+      })
+      console.log('[Floor] 取消红名标记功能开发中，checkInId:', checkInId)
+      // 暂时注释，等待创建 toggleFlag 云函数
+      /*
+      const res = await Cloud.callFunction({
+        name: 'toggleFlag',
         data: { checkInId }
       })
-      if (res.data?.code === 200) {
+      if (res.result.code === 200) {
         Taro.showToast({ title: '已取消标记', icon: 'success' })
         // 刷新红名人员列表
         loadFlaggedPeople()
@@ -214,6 +217,7 @@ const FloorPage = () => {
         loadFloorStats()
         loadNanTwoFloorStats()
       }
+      */
     } catch (error) {
       console.error('[Floor] 取消红名标记失败:', error)
       Taro.showToast({ title: '取消标记失败', icon: 'none' })
@@ -224,40 +228,22 @@ const FloorPage = () => {
     setLoading(true)
     try {
       console.log('[Floor] 开始加载楼层统计数据...')
-      
-      const res = await Network.request({
-        url: '/api/floors/stats'
-      })
+
+      const res = await Cloud.callFunction('getFloorStats', {})
 
       console.log('[Floor] 楼层统计响应:', res)
-      console.log('[Floor] 响应状态码:', res.statusCode)
-      console.log('[Floor] 响应数据:', res.data)
+      console.log('[Floor] 云函数返回:', res.result)
 
-      if (res.statusCode !== 200) {
-        console.error('[Floor] 请求失败，状态码:', res.statusCode)
-        // 尝试从本地缓存加载
-        const cachedData = Taro.getStorageSync('floorStats')
-        if (cachedData && cachedData.length > 0) {
-          console.log('[Floor] 使用本地缓存数据')
-          setFloorStats(cachedData)
-          Taro.showToast({ title: '使用离线数据', icon: 'none' })
-        } else {
-          Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
-          setFloorStats([])
-        }
-        return
-      }
-
-      if (res.data?.code === 200 && res.data?.data) {
+      if (res.result.code === 200 && res.result.data) {
         // 过滤掉1楼，只显示2-4楼
-        const floors = res.data.data.filter((f: FloorStats) => f.floor >= 2)
+        const floors = res.result.data.filter((f: FloorStats) => f.floor >= 2)
         console.log(`[Floor] 过滤后的楼层数据: ${floors.length} 个楼层`)
         setFloorStats(floors)
         // 保存到本地缓存
         Taro.setStorageSync('floorStats', floors)
         console.log('[Floor] 数据已缓存到本地')
       } else {
-        console.error('[Floor] 响应数据格式错误:', res.data)
+        console.error('[Floor] 响应数据格式错误:', res.result)
         // 尝试从本地缓存加载
         const cachedData = Taro.getStorageSync('floorStats')
         if (cachedData && cachedData.length > 0) {
@@ -285,26 +271,34 @@ const FloorPage = () => {
   }
 
   const loadNotificationCount = async () => {
+    // TODO: 需要在云函数中创建 getNotificationCount 云函数
     try {
-      const res = await Network.request({
-        url: '/api/notification/count'
-      })
-      if (res.data?.code === 200) {
-        setNotificationCount(res.data.data?.count || 0)
-      }
+      // 临时注释，等待云函数创建
+      // const res = await Cloud.callFunction({
+      //   name: 'getNotificationCount',
+      //   data: {}
+      // })
+      // if (res.result.code === 200) {
+      //   setNotificationCount(res.result.data?.count || 0)
+      // }
+      setNotificationCount(0)
     } catch (error) {
       console.error('加载通知数量失败:', error)
     }
   }
 
   const loadNotifications = async () => {
+    // TODO: 需要在云函数中创建 getNotificationList 云函数
     try {
-      const res = await Network.request({
-        url: '/api/notification/list'
-      })
-      if (res.data?.code === 200) {
-        setNotifications(res.data.data || [])
-      }
+      // 临时注释，等待云函数创建
+      // const res = await Cloud.callFunction({
+      //   name: 'getNotificationList',
+      //   data: {}
+      // })
+      // if (res.result.code === 200) {
+      //   setNotifications(res.result.data || [])
+      // }
+      setNotifications([])
     } catch (error) {
       console.error('加载通知列表失败:', error)
       setNotifications([])
