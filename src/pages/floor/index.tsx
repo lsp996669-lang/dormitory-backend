@@ -1,5 +1,5 @@
 import { View, Text } from '@tarojs/components'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,9 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock, CircleAlert, X, Plus, Download } from 'lucide-react-taro'
+import { Building, Bed, Bell, BellRing, User, Calendar, Trash2, ClipboardCheck, Wifi, WifiOff, RefreshCw, House, ChevronDown, ChevronUp, Phone, CreditCard, Clock } from 'lucide-react-taro'
 import { Network } from '@/network'
-import { Cloud } from '@/cloud'
 import './index.css'
 
 interface FloorStats {
@@ -53,6 +52,7 @@ const FloorPage = () => {
   const [notificationCount, setNotificationCount] = useState(0)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [expandedDormitory, setExpandedDormitory] = useState(true) // 南四巷180号宿舍展开状态
   const [expandedNanTwo, setExpandedNanTwo] = useState(false) // 南二巷宿舍展开状态
   const [nanTwoFloorStats, setNanTwoFloorStats] = useState<NanTwoFloorStats[]>([]) // 南二巷楼层统计
@@ -99,25 +99,29 @@ const FloorPage = () => {
   const [searching, setSearching] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
 
-  // 红名人员状态
-  const [flaggedPeople, setFlaggedPeople] = useState<Array<{
-    checkInId: number
-    name: string
-    idCard: string
-    phone: string
-    checkInTime: string
-    dormitory: string
-    dormitoryName: string
-    floor: number
-    room: string
-    bedNumber: number
-    position: string
-    positionLabel: string
-    bedId: number
-  }>>([])
-  const [showFlaggedList, setShowFlaggedList] = useState(false)
+  // 检查服务器状态
+  const checkServerStatus = async () => {
+    try {
+      const res = await Network.request({
+        url: '/api/export/stats',
+        method: 'GET',
+      })
+      if (res.statusCode === 200) {
+        setServerStatus('online')
+      } else {
+        setServerStatus('offline')
+      }
+    } catch (error) {
+      setServerStatus('offline')
+    }
+  }
 
-  // 移除服务器状态检查，已迁移到 CloudBase
+  // 定时检查服务器状态
+  useEffect(() => {
+    checkServerStatus()
+    const timer = setInterval(checkServerStatus, 60000) // 每分钟检查一次
+    return () => clearInterval(timer)
+  }, [])
 
   useDidShow(() => {
     checkAuth()
@@ -125,12 +129,11 @@ const FloorPage = () => {
     loadNotificationCount()
     loadNanTwoFloorStats()
     loadAllResidents() // 加载所有入住人员数据
-    loadFlaggedPeople() // 加载红名人员
   })
 
   usePullDownRefresh(() => {
     console.log('[Floor] 触发下拉刷新')
-    Promise.all([loadFloorStats(), loadNotificationCount(), loadNanTwoFloorStats(), loadFlaggedPeople()])
+    Promise.all([loadFloorStats(), loadNotificationCount(), loadNanTwoFloorStats()])
       .finally(() => {
         Taro.stopPullDownRefresh()
       })
@@ -147,13 +150,15 @@ const FloorPage = () => {
   // 加载南二巷楼层统计
   const loadNanTwoFloorStats = async () => {
     try {
-      const res = await Cloud.callFunction('getNantwoFloorStats', {})
-      if (res.result.code === 200 && res.result.data) {
-        setNanTwoFloorStats(res.result.data)
+      const res = await Network.request({
+        url: '/api/floors/nantwo/floor-stats'
+      })
+      if (res.data?.code === 200 && res.data?.data) {
+        setNanTwoFloorStats(res.data.data)
         // 计算总计
-        const total = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
-        const occupied = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
-        const maintenance = res.result.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
+        const total = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.totalBeds, 0)
+        const occupied = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + f.occupiedBeds, 0)
+        const maintenance = res.data.data.reduce((sum: number, f: NanTwoFloorStats) => sum + (f.maintenanceBeds || 0), 0)
         setNanTwoStats({
           totalBeds: total,
           occupiedBeds: occupied,
@@ -169,58 +174,15 @@ const FloorPage = () => {
   // 加载所有入住人员数据（用于前端搜索）
   const loadAllResidents = async () => {
     try {
-      const res = await Cloud.callFunction('getCheckinList', {})
-      if (res.result.code === 200 && res.result.data) {
-        setAllResidents(res.result.data)
-        console.log('[Floor] 加载入住人员数据:', res.result.data.length, '条')
+      const res = await Network.request({
+        url: '/api/checkin/list'
+      })
+      if (res.data?.code === 200 && res.data?.data) {
+        setAllResidents(res.data.data)
+        console.log('[Floor] 加载入住人员数据:', res.data.data.length, '条')
       }
     } catch (error) {
       console.error('[Floor] 加载入住人员数据失败:', error)
-    }
-  }
-
-  // 加载红名人员列表
-  const loadFlaggedPeople = async () => {
-    try {
-      const res = await Cloud.callFunction('getFlaggedPeople', {})
-      if (res.result.code === 200 && res.result.data) {
-        setFlaggedPeople(res.result.data)
-        console.log('[Floor] 加载红名人员:', res.result.data.length, '条')
-      }
-    } catch (error) {
-      console.error('[Floor] 加载红名人员失败:', error)
-    }
-  }
-
-  // 取消红名标记
-  const handleUnflag = async (checkInId: number, e: any) => {
-    e.stopPropagation()
-    try {
-      // TODO: 需要创建 toggleFlag 云函数
-      Taro.showToast({
-        title: '功能开发中',
-        icon: 'none',
-        duration: 2000
-      })
-      console.log('[Floor] 取消红名标记功能开发中，checkInId:', checkInId)
-      // 暂时注释，等待创建 toggleFlag 云函数
-      /*
-      const res = await Cloud.callFunction({
-        name: 'toggleFlag',
-        data: { checkInId }
-      })
-      if (res.result.code === 200) {
-        Taro.showToast({ title: '已取消标记', icon: 'success' })
-        // 刷新红名人员列表
-        loadFlaggedPeople()
-        // 刷新楼层统计（可能有变化）
-        loadFloorStats()
-        loadNanTwoFloorStats()
-      }
-      */
-    } catch (error) {
-      console.error('[Floor] 取消红名标记失败:', error)
-      Taro.showToast({ title: '取消标记失败', icon: 'none' })
     }
   }
 
@@ -228,22 +190,40 @@ const FloorPage = () => {
     setLoading(true)
     try {
       console.log('[Floor] 开始加载楼层统计数据...')
-
-      const res = await Cloud.callFunction('getFloorStats', {})
+      
+      const res = await Network.request({
+        url: '/api/floors/stats'
+      })
 
       console.log('[Floor] 楼层统计响应:', res)
-      console.log('[Floor] 云函数返回:', res.result)
+      console.log('[Floor] 响应状态码:', res.statusCode)
+      console.log('[Floor] 响应数据:', res.data)
 
-      if (res.result.code === 200 && res.result.data) {
+      if (res.statusCode !== 200) {
+        console.error('[Floor] 请求失败，状态码:', res.statusCode)
+        // 尝试从本地缓存加载
+        const cachedData = Taro.getStorageSync('floorStats')
+        if (cachedData && cachedData.length > 0) {
+          console.log('[Floor] 使用本地缓存数据')
+          setFloorStats(cachedData)
+          Taro.showToast({ title: '使用离线数据', icon: 'none' })
+        } else {
+          Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+          setFloorStats([])
+        }
+        return
+      }
+
+      if (res.data?.code === 200 && res.data?.data) {
         // 过滤掉1楼，只显示2-4楼
-        const floors = res.result.data.filter((f: FloorStats) => f.floor >= 2)
+        const floors = res.data.data.filter((f: FloorStats) => f.floor >= 2)
         console.log(`[Floor] 过滤后的楼层数据: ${floors.length} 个楼层`)
         setFloorStats(floors)
         // 保存到本地缓存
         Taro.setStorageSync('floorStats', floors)
         console.log('[Floor] 数据已缓存到本地')
       } else {
-        console.error('[Floor] 响应数据格式错误:', res.result)
+        console.error('[Floor] 响应数据格式错误:', res.data)
         // 尝试从本地缓存加载
         const cachedData = Taro.getStorageSync('floorStats')
         if (cachedData && cachedData.length > 0) {
@@ -271,34 +251,26 @@ const FloorPage = () => {
   }
 
   const loadNotificationCount = async () => {
-    // TODO: 需要在云函数中创建 getNotificationCount 云函数
     try {
-      // 临时注释，等待云函数创建
-      // const res = await Cloud.callFunction({
-      //   name: 'getNotificationCount',
-      //   data: {}
-      // })
-      // if (res.result.code === 200) {
-      //   setNotificationCount(res.result.data?.count || 0)
-      // }
-      setNotificationCount(0)
+      const res = await Network.request({
+        url: '/api/notification/count'
+      })
+      if (res.data?.code === 200) {
+        setNotificationCount(res.data.data?.count || 0)
+      }
     } catch (error) {
       console.error('加载通知数量失败:', error)
     }
   }
 
   const loadNotifications = async () => {
-    // TODO: 需要在云函数中创建 getNotificationList 云函数
     try {
-      // 临时注释，等待云函数创建
-      // const res = await Cloud.callFunction({
-      //   name: 'getNotificationList',
-      //   data: {}
-      // })
-      // if (res.result.code === 200) {
-      //   setNotifications(res.result.data || [])
-      // }
-      setNotifications([])
+      const res = await Network.request({
+        url: '/api/notification/list'
+      })
+      if (res.data?.code === 200) {
+        setNotifications(res.data.data || [])
+      }
     } catch (error) {
       console.error('加载通知列表失败:', error)
       setNotifications([])
@@ -339,7 +311,7 @@ const FloorPage = () => {
       return
     }
     Taro.navigateTo({
-      url: `/pages/rollcall/index?dormitory=nansi&floor=${floor}`
+      url: `/pages/rollcall/index?floor=${floor}`
     })
   }
 
@@ -481,71 +453,6 @@ const FloorPage = () => {
     return position === 'upper' ? '上铺' : '下铺'
   }
 
-  // 导出数据
-  const handleExportData = async () => {
-    if (!isLoggedIn) {
-      Taro.showToast({ title: '请先登录', icon: 'none' })
-      return
-    }
-
-    try {
-      Taro.showLoading({ title: '正在导出...', mask: true })
-
-      console.log('[导出] 调用 exportData 云函数')
-      const res = await Cloud.callFunction('exportData', {})
-
-      console.log('[导出] 云函数响应:', res)
-
-      if (res.result?.code === 200 && res.result.data?.fileID) {
-        const fileID = res.result.data.fileID
-
-        // 下载文件
-        const downloadRes = await Taro.cloud.downloadFile({
-          fileID: fileID
-        })
-
-        console.log('[导出] 下载结果:', downloadRes)
-
-        if (downloadRes.tempFilePath) {
-          // 保存文件到本地
-          const savedRes = await Taro.saveFile({
-            tempFilePath: downloadRes.tempFilePath
-          })
-
-          console.log('[导出] 保存结果:', savedRes)
-
-          Taro.hideLoading()
-
-          // 打开文件
-          await Taro.openDocument({
-            filePath: (savedRes as any).savedFilePath,
-            showMenu: true,
-            success: () => {
-              console.log('[导出] 文件打开成功')
-            },
-            fail: (err) => {
-              console.error('[导出] 文件打开失败:', err)
-            }
-          })
-
-          Taro.showToast({ title: '导出成功', icon: 'success' })
-        } else {
-          throw new Error('文件下载失败')
-        }
-      } else {
-        throw new Error(res.result?.msg || '导出失败')
-      }
-    } catch (error: any) {
-      Taro.hideLoading()
-      console.error('[导出] 导出失败:', error)
-      Taro.showToast({
-        title: error.message || '导出失败',
-        icon: 'none',
-        duration: 3000
-      })
-    }
-  }
-
   return (
     <View className="min-h-screen bg-gray-50 p-4">
       <View className="mb-4">
@@ -554,64 +461,38 @@ const FloorPage = () => {
             <Text className="text-2xl font-bold text-gray-800 block">宿舍管理</Text>
             <Text className="text-sm text-gray-500 block mt-1">选择楼层进行入住登记</Text>
           </View>
-          <View className="flex items-center gap-2">
-            {/* 用户登录状态 */}
-            <View
-              className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
-              style={{ backgroundColor: isLoggedIn ? '#dcfce7' : '#fef3c7' }}
-              onClick={() => {
-                if (isLoggedIn) {
-                  Taro.showModal({
-                    title: '提示',
-                    content: '确定要退出登录吗？',
-                    success: (res) => {
-                      if (res.confirm) {
-                        Taro.removeStorageSync('userInfo')
-                        setIsLoggedIn(false)
-                        Taro.showToast({ title: '已退出登录', icon: 'success' })
-                      }
+          {/* 用户登录状态 */}
+          <View 
+            className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
+            style={{ backgroundColor: isLoggedIn ? '#dcfce7' : '#fef3c7' }}
+            onClick={() => {
+              if (isLoggedIn) {
+                Taro.showModal({
+                  title: '提示',
+                  content: '确定要退出登录吗？',
+                  success: (res) => {
+                    if (res.confirm) {
+                      Taro.removeStorageSync('userInfo')
+                      setIsLoggedIn(false)
+                      Taro.showToast({ title: '已退出登录', icon: 'success' })
                     }
-                  })
-                } else {
-                  Taro.navigateTo({ url: '/pages/login/index' })
-                }
-              }}
-            >
-              {isLoggedIn ? (
-                <>
-                  <User size={16} color="#16a34a" />
-                  <Text className="text-xs" style={{ color: '#16a34a' }}>已登录</Text>
-                </>
-              ) : (
-                <>
-                  <User size={16} color="#d97706" />
-                  <Text className="text-xs" style={{ color: '#d97706' }}>点击登录</Text>
-                </>
-              )}
-            </View>
-
-            {/* 添加床位按钮 */}
-            {isLoggedIn && (
-              <View
-                className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
-                style={{ backgroundColor: '#dbeafe' }}
-                onClick={() => Taro.navigateTo({ url: '/pages/add-bed/index' })}
-              >
-                <Plus size={16} color="#2563eb" />
-                <Text className="text-xs" style={{ color: '#2563eb' }}>添加床位</Text>
-              </View>
-            )}
-
-            {/* 导出数据按钮 */}
-            {isLoggedIn && (
-              <View
-                className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer"
-                style={{ backgroundColor: '#dcfce7' }}
-                onClick={handleExportData}
-              >
-                <Download size={16} color="#16a34a" />
-                <Text className="text-xs" style={{ color: '#16a34a' }}>导出数据</Text>
-              </View>
+                  }
+                })
+              } else {
+                Taro.navigateTo({ url: '/pages/login/index' })
+              }
+            }}
+          >
+            {isLoggedIn ? (
+              <>
+                <User size={16} color="#16a34a" />
+                <Text className="text-xs" style={{ color: '#16a34a' }}>已登录</Text>
+              </>
+            ) : (
+              <>
+                <User size={16} color="#d97706" />
+                <Text className="text-xs" style={{ color: '#d97706' }}>点击登录</Text>
+              </>
             )}
           </View>
         </View>
@@ -672,92 +553,59 @@ const FloorPage = () => {
         </Card>
       )}
 
-      {/* 红名人员警示区域 */}
-      {flaggedPeople.length > 0 && (
-        <Card className="overflow-hidden mb-4 border-2 border-red-300 bg-red-50">
-          <CardHeader className="pb-3">
-            <View className="flex items-center justify-between">
-              <View className="flex items-center gap-3">
-                <View className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                  <CircleAlert size={20} color="#dc2626" />
-                </View>
-                <View>
-                  <CardTitle className="text-lg text-red-700">重点关注人员</CardTitle>
-                  <Text className="text-xs text-red-500">
-                    {flaggedPeople.length} 人
-                  </Text>
-                </View>
+      {/* 服务状态指示器 */}
+      <View className="mb-4">
+        <View 
+          className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer inline-flex"
+          style={{ backgroundColor: serverStatus === 'online' ? '#dcfce7' : serverStatus === 'offline' ? '#fee2e2' : '#fef3c7' }}
+          onClick={checkServerStatus}
+        >
+          {serverStatus === 'online' ? (
+            <>
+              <Wifi size={16} color="#16a34a" />
+              <Text className="text-xs" style={{ color: '#16a34a' }}>服务正常</Text>
+            </>
+          ) : serverStatus === 'offline' ? (
+            <>
+              <WifiOff size={16} color="#dc2626" />
+              <Text className="text-xs" style={{ color: '#dc2626' }}>服务离线</Text>
+            </>
+          ) : (
+            <>
+              <RefreshCw size={16} color="#d97706" />
+              <Text className="text-xs" style={{ color: '#d97706' }}>检测中...</Text>
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* 服务离线提示 */}
+      {serverStatus === 'offline' && (
+        <Card className="overflow-hidden mb-4 border-2 border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <View className="flex items-center gap-3">
+              <View className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <WifiOff size={20} color="#dc2626" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-medium text-red-800">后端服务已断开</Text>
+                <Text className="text-xs text-red-600 mt-1">
+                  请保持开发网页打开，或刷新此页面重新连接
+                </Text>
               </View>
               <Button
                 size="sm"
-                variant="ghost"
-                onClick={() => setShowFlaggedList(!showFlaggedList)}
+                className="bg-red-600 text-white"
+                onClick={checkServerStatus}
               >
-                {showFlaggedList ? (
-                  <ChevronUp size={18} color="#dc2626" />
-                ) : (
-                  <ChevronDown size={18} color="#dc2626" />
-                )}
+                <RefreshCw size={14} color="#fff" />
               </Button>
             </View>
-          </CardHeader>
-
-          {/* 红名人员列表 */}
-          {showFlaggedList && (
-            <CardContent className="pt-0 border-t border-red-200">
-              <View className="space-y-2 mt-3">
-                {flaggedPeople.map((person) => (
-                  <View
-                    key={person.checkInId}
-                    className="bg-white rounded-lg p-3 border border-red-200 shadow-sm"
-                  >
-                    <View className="flex items-start justify-between">
-                      <View 
-                        className="flex-1" 
-                        onClick={() => {
-                          Taro.navigateTo({
-                            url: `/pages/detail/index?bedId=${person.bedId}&checkInId=${person.checkInId}`
-                          })
-                        }}
-                      >
-                        <View className="flex items-center gap-2 mb-2">
-                          <CircleAlert size={14} color="#dc2626" />
-                          <Text className="text-sm font-bold text-red-600">{person.name}</Text>
-                          <Badge className="bg-red-500 text-white text-xs">重点关注</Badge>
-                        </View>
-                        <View className="flex items-center gap-1.5 text-xs text-gray-500 ml-1">
-                          <Building size={12} color="#9ca3af" />
-                          <Text>{person.dormitoryName} {person.floor}楼</Text>
-                          {person.room && <Text> {person.room}房</Text>}
-                          <Text> {person.bedNumber}号床 {person.positionLabel}</Text>
-                        </View>
-                        {person.phone && (
-                          <View className="flex items-center gap-1.5 text-xs text-gray-500 ml-1 mt-1">
-                            <Phone size={12} color="#9ca3af" />
-                            <Text>{person.phone}</Text>
-                          </View>
-                        )}
-                      </View>
-                      <View className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e: any) => handleUnflag(person.checkInId, e)}
-                          className="text-gray-500 hover:text-red-500 p-1 min-w-0 h-auto"
-                        >
-                          <X size={16} color="#6b7280" />
-                        </Button>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </CardContent>
-          )}
+          </CardContent>
         </Card>
       )}
 
-      {/* 搜索功能 - 已登录时显示 */}{/* 系统通知卡片 */}
+      {/* 系统通知卡片 */}
       <Card className="overflow-hidden mb-4">
         <CardHeader className="pb-3">
           <View className="flex items-center justify-between">

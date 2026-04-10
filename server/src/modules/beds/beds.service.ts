@@ -10,7 +10,7 @@ interface RoomConfig {
 
 const NAN_TWO_ROOM_CONFIG: Record<number, RoomConfig[]> = {
   2: [
-    { room: '201', bedCount: 3, bedPositions: [1, 2, 3] },
+    { room: '201', bedCount: 2, bedPositions: [1, 2] },
     { room: '202', bedCount: 3, bedPositions: [1, 2, 3] },
     { room: '203', bedCount: 3, bedPositions: [1, 2, 3] },
     { room: '204', bedCount: 2, bedPositions: [1, 2] },

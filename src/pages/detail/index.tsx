@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { User, Phone, CreditCard, Calendar, LogOut, Bed, Trash2, ArrowRight, Pencil, Copy, MapPin } from 'lucide-react-taro'
-import { Cloud } from '@/cloud'
+import { Network } from '@/network'
 import { PasswordDialog } from '@/components/PasswordDialog'
 import './index.css'
 
@@ -128,12 +128,14 @@ const DetailPage = () => {
 
   const loadSwapBeds = async () => {
     try {
-      const res = await Cloud.callFunction('getAllBeds', {})
-      console.log('互换可用床位响应:', res.result)
-      if (res.result?.code === 200 && res.result?.data) {
+      const res = await Network.request({
+        url: '/api/beds/all'
+      })
+      console.log('互换可用床位响应:', res.data)
+      if (res.data?.code === 200 && res.data?.data) {
         // 使用所有床位数据（南四巷和南二巷）
-        const nansiBeds = res.result.data.nansiBeds || []
-        const nantwoBeds = res.result.data.nantwoBeds || []
+        const nansiBeds = res.data.data.nansiBeds || []
+        const nantwoBeds = res.data.data.nantwoBeds || []
         const allBeds = [...nansiBeds, ...nantwoBeds].map((b: { id: number; floor: number; bed_number: number; position: string; room: string; dormitory: string; status: string }) => ({
           ...b,
           isOccupied: b.status === 'occupied', // 标记是否已入住
@@ -146,7 +148,7 @@ const DetailPage = () => {
         }
         setSwapTargetBedId(null)
       } else {
-        Taro.showToast({ title: res.result?.msg || '加载可用床位失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '加载可用床位失败', icon: 'none' })
       }
     } catch (error) {
       console.error('加载可用床位失败:', error)
@@ -157,20 +159,22 @@ const DetailPage = () => {
   const loadTransferableBeds = async () => {
     setLoadingBeds(true)
     try {
-      const res = await Cloud.callFunction('getTransferableBeds', { bedId })
+      const res = await Network.request({
+        url: `/api/beds/transferable/${bedId}`
+      })
 
-      console.log('可转移床位响应:', res.result)
+      console.log('可转移床位响应:', res.data)
 
-      if (res.result?.code === 200 && res.result?.data) {
-        setTransferData(res.result.data)
+      if (res.data?.code === 200 && res.data?.data) {
+        setTransferData(res.data.data)
         setTargetBedId(null)
         // 设置默认选中的楼层
-        const floors = [...new Set(res.result.data.transferableBeds.map((b: { floor: number }) => b.floor))]
+        const floors = [...new Set(res.data.data.transferableBeds.map((b: { floor: number }) => b.floor))]
         if (floors.length > 0) {
           setSelectedFloor(String(floors[0]))
         }
       } else {
-        Taro.showToast({ title: res.result?.msg || '加载可转移床位失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '加载可转移床位失败', icon: 'none' })
       }
     } catch (error) {
       console.error('加载可转移床位失败:', error)
@@ -194,21 +198,25 @@ const DetailPage = () => {
 
     setSubmitting(true)
     try {
-      const res = await Cloud.callFunction('transferCheckin', {
+      const res = await Network.request({
+        url: '/api/checkin/transfer',
+        method: 'POST',
+        data: {
           checkInId: parseInt(checkInId as string, 10),
           targetBedId: targetBedId
-        })
+        }
+      })
 
-      console.log('转移床位响应:', res.result)
+      console.log('转移床位响应:', res.data)
 
-      if (res.result?.code === 200) {
+      if (res.data?.code === 200) {
         Taro.showToast({ title: '转移成功', icon: 'success' })
         setShowTransferDialog(false)
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
       } else {
-        Taro.showToast({ title: res.result?.msg || '转移失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '转移失败', icon: 'none' })
       }
     } catch (error) {
       console.error('转移床位失败:', error)
@@ -301,34 +309,46 @@ const DetailPage = () => {
       let res
       if (dateEditType === 'checkin-checkin') {
         // 修改入住记录的入住日期
-        res = await Cloud.callFunction('updateCheckinDate', {
+        res = await Network.request({
+          url: '/api/checkin/update-date',
+          method: 'POST',
+          data: {
             checkInId: parseInt(checkInId as string, 10),
             checkInDate: editCheckInDate
-          })
+          }
+        })
       } else if (dateEditType === 'checkout-checkin') {
         // 修改搬离记录的入住日期
-        res = await Cloud.callFunction('updateCheckoutCheckinDate', {
+        res = await Network.request({
+          url: '/api/checkout/update-checkin-date',
+          method: 'POST',
+          data: {
             checkOutId: parseInt(checkOutId as string, 10),
             checkInDate: editCheckInDate
-          })
+          }
+        })
       } else if (dateEditType === 'checkout-checkout') {
         // 修改搬离记录的搬离日期
-        res = await Cloud.callFunction('updateCheckoutDate', {
+        res = await Network.request({
+          url: '/api/checkout/update-checkout-date',
+          method: 'POST',
+          data: {
             checkOutId: parseInt(checkOutId as string, 10),
             checkOutDate: editCheckOutDate
-          })
+          }
+        })
       }
 
-      console.log('日期修改响应:', res?.result)
+      console.log('日期修改响应:', res?.data)
 
-      if (res?.result?.code === 200) {
+      if (res?.data?.code === 200) {
         Taro.showToast({ title: '修改成功', icon: 'success' })
         setShowDateEditDialog(false)
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
       } else {
-        Taro.showToast({ title: res?.result?.msg || '修改失败', icon: 'none' })
+        Taro.showToast({ title: res?.data?.msg || '修改失败', icon: 'none' })
       }
     } catch (error) {
       console.error('日期修改失败:', error)
@@ -378,11 +398,15 @@ const DetailPage = () => {
     if (!checkInId) return
     setSubmitting(true)
     try {
-      const res = await Cloud.callFunction('toggleStation', {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-station',
+        method: 'POST',
+        data: {
           checkInId: parseInt(checkInId as string, 10),
           stationName: station
-        })
-      if (res.result?.code === 200) {
+        }
+      })
+      if (res.data?.code === 200) {
         setStationName(station)
         setShowStationDialog(false)
         const stationLabels: Record<string, string> = {
@@ -392,7 +416,7 @@ const DetailPage = () => {
         }
         Taro.showToast({ title: station ? `已标记${stationLabels[station]}` : '已取消标注', icon: 'success' })
       } else {
-        Taro.showToast({ title: res.result?.msg || '操作失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
       }
     } catch (error) {
       console.error('设置站点标注失败:', error)
@@ -420,10 +444,14 @@ const DetailPage = () => {
     if (!checkInId) return
     setSubmitting(true)
     try {
-      const res = await Cloud.callFunction('toggleFlag', {
+      const res = await Network.request({
+        url: '/api/checkin/toggle-flag',
+        method: 'POST',
+        data: {
           checkInId: parseInt(checkInId as string, 10)
-        })
-      if (res.result?.code === 200) {
+        }
+      })
+      if (res.data?.code === 200) {
         const newFlagged = !isFlagged
         setIsFlagged(newFlagged)
         setShowFlagConfirmDialog(false)
@@ -432,7 +460,7 @@ const DetailPage = () => {
           icon: 'success' 
         })
       } else {
-        Taro.showToast({ title: res.result?.msg || '操作失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '操作失败', icon: 'none' })
       }
     } catch (error) {
       console.error('切换红名标记失败:', error)
@@ -471,18 +499,22 @@ const DetailPage = () => {
     }
     setSubmitting(true)
     try {
-      const res = await Cloud.callFunction('swapBeds', {
+      const res = await Network.request({
+        url: '/api/beds/swap',
+        method: 'POST',
+        data: {
           checkInId: parseInt(checkInId as string, 10),
           targetBedId: swapTargetBedId
-        })
-      if (res.result?.code === 200) {
+        }
+      })
+      if (res.data?.code === 200) {
         Taro.showToast({ title: '互换成功', icon: 'success' })
         setShowSwapDialog(false)
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
       } else {
-        Taro.showToast({ title: res.result?.msg || '互换失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '互换失败', icon: 'none' })
       }
     } catch (error) {
       console.error('床位互换失败:', error)
@@ -511,22 +543,26 @@ const DetailPage = () => {
 
     setSubmitting(true)
     try {
-      const res = await Cloud.callFunction('checkout', {
+      const res = await Network.request({
+        url: '/api/checkout',
+        method: 'POST',
+        data: {
           checkInId: parseInt(checkInId as string, 10),
           bedId: parseInt(bedId as string, 10),
           checkOutDate: checkOutDate
-        })
+        }
+      })
 
-      console.log('搬离登记响应:', res.result)
+      console.log('搬离登记响应:', res.data)
 
-      if (res.result?.code === 200) {
+      if (res.data?.code === 200) {
         Taro.showToast({ title: '搬离成功', icon: 'success' })
         setShowCheckOutDialog(false)
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
       } else {
-        Taro.showToast({ title: res.result?.msg || '搬离失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '搬离失败', icon: 'none' })
       }
     } catch (error) {
       console.error('搬离登记失败:', error)
@@ -556,17 +592,20 @@ const DetailPage = () => {
     setShowPasswordDialog(false)
     setSubmitting(true)
     try {
-      const res = await Cloud.callFunction('deleteCheckout', { checkOutId })
+      const res = await Network.request({
+        url: `/api/checkout/${checkOutId}`,
+        method: 'DELETE'
+      })
 
-      console.log('删除记录响应:', res.result)
+      console.log('删除记录响应:', res.data)
 
-      if (res.result?.code === 200) {
+      if (res.data?.code === 200) {
         Taro.showToast({ title: '删除成功', icon: 'success' })
         setTimeout(() => {
           Taro.navigateBack()
         }, 1500)
       } else {
-        Taro.showToast({ title: res.result?.msg || '删除失败', icon: 'none' })
+        Taro.showToast({ title: res.data?.msg || '删除失败', icon: 'none' })
       }
     } catch (error) {
       console.error('删除记录失败:', error)

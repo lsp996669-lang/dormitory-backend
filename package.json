@@ -24,12 +24,7 @@
     "preview:tt": "taro build --type tt --preview",
     "preview:weapp": "taro build --type weapp --preview",
     "tsc": "npx tsc --noEmit --skipLibCheck",
-    "validate": "pnpm exec concurrently --kill-others-on-fail --kill-signal SIGKILL -n lint,tsc -c red,blue \"pnpm lint:build\" \"pnpm tsc\"",
-    "deploy": "node deploy.js",
-    "deploy:preview": "node deploy.js preview",
-    "deploy:review": "node deploy.js review",
-    "deploy:upload": "node deploy.js production",
-    "deploy:production": "node deploy.js production"
+    "validate": "pnpm exec concurrently --kill-others-on-fail --kill-signal SIGKILL -n lint,tsc -c red,blue \"pnpm lint:build\" \"pnpm tsc\""
   },
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx}": [
@@ -56,7 +51,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "lru-cache": "^11.3.3",
     "lucide-react-taro": "^1.3.0",
     "nanoid": "^5.1.7",
     "picocolors": "^1.1.1",
@@ -90,7 +84,7 @@
     "eslint-plugin-tailwindcss": "^3.18.2",
     "less": "^4.2.0",
     "lint-staged": "^16.1.2",
-    "miniprogram-ci": "^2.1.31",
+    "miniprogram-ci": "^2.1.26",
     "only-allow": "^1.2.2",
     "postcss": "^8.5.6",
     "react-refresh": "^0.14.0",

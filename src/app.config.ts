@@ -8,8 +8,6 @@ export default defineAppConfig({
     'pages/qrcode/index',
     'pages/rollcall/index',
     'pages/import/index',
-    'pages/test-cloud/index',
-    'pages/add-bed/index',
   ],
   window: {
     backgroundTextStyle: 'light',

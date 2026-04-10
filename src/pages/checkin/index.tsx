@@ -14,7 +14,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Network } from '@/network'
-import { Cloud } from '@/cloud'
 import { Bed, User, Phone, CreditCard, Calendar, DoorOpen } from 'lucide-react-taro'
 import './index.css'
 
@@ -93,75 +92,31 @@ const CheckInPage = () => {
   const loadBeds = async () => {
     setLoading(true)
     try {
+      let url = '/api/beds/floor/' + floor
       let cacheKey = `beds_floor_${floor}`
-
-      console.log(`[CheckIn] 开始加载床位数据，floor: ${floor}, dormitory: ${dormitory ? dormitory : 'nansi'}`)
-
-      let res
-
+      
+      // 南二巷宿舍使用不同的API
       if (isNanTwo) {
-        // 南二巷：使用云函数
-        const params: any = { floor }
         if (room) {
-          params.room = room
+          url = `/api/beds/nantwo/floor/${floor}/room/${room}`
           cacheKey = `beds_nantwo_${floor}_${room}`
         } else {
+          // 获取整个楼层的床位
+          url = `/api/beds/nantwo/floor/${floor}/beds`
           cacheKey = `beds_nantwo_floor_${floor}`
         }
-
-        console.log('[CheckIn] 调用云函数 getNanTwoBeds，参数:', params)
-        res = await Cloud.callFunction('getNanTwoBeds', params)
-      } else {
-        // 南四巷：使用网络请求
-        let url = '/api/beds/floor/' + floor
-        res = await Network.request({ url })
       }
+
+      console.log(`[CheckIn] 开始加载床位数据，URL: ${url}`)
+      
+      const res = await Network.request({ url })
 
       console.log('[CheckIn] 床位数据响应:', res)
+      console.log('[CheckIn] 响应状态码:', res.statusCode)
+      console.log('[CheckIn] 响应数据:', res.data)
 
-      // 处理响应数据
-      let bedsData = []
-
-      if (isNanTwo) {
-        // 云函数响应
-        if (res.result?.code === 200 && res.result?.data) {
-          bedsData = res.result.data
-        }
-      } else {
-        // 网络请求响应
-        if (res.data?.code === 200 && res.data?.data) {
-          // 转换字段名：蛇形命名 -> 驼峰命名
-          bedsData = res.data.data.map((bed: any) => ({
-            id: bed.id,
-            floor: bed.floor,
-            bedNumber: bed.bed_number,
-            position: bed.position,
-            status: bed.status,
-            room: bed.room,
-            dormitory: bed.dormitory,
-            checkIn: bed.checkIn ? {
-              id: bed.checkIn.id,
-              name: bed.checkIn.name,
-              idCard: bed.checkIn.id_card,
-              phone: bed.checkIn.phone,
-              checkInTime: bed.checkIn.check_in_time,
-              isStationMarked: bed.checkIn.is_station_marked ?? false,
-              isRider: bed.checkIn.is_rider ?? false,
-              isFlagged: bed.checkIn.is_flagged ?? false,
-              stationName: bed.checkIn.station_name ?? null,
-            } : undefined
-          }))
-        }
-      }
-
-      if (bedsData.length > 0) {
-        console.log(`[CheckIn] 格式化后的床位数据: ${bedsData.length} 条`)
-        setBeds(bedsData)
-        // 保存到本地缓存
-        Taro.setStorageSync(cacheKey, bedsData)
-        console.log('[CheckIn] 数据已缓存到本地:', cacheKey)
-      } else {
-        console.error('[CheckIn] 响应数据格式错误或无数据:', res)
+      if (res.statusCode !== 200) {
+        console.error('[CheckIn] 请求失败，状态码:', res.statusCode)
         // 尝试从本地缓存加载
         const cachedData = Taro.getStorageSync(cacheKey)
         if (cachedData && cachedData.length > 0) {
@@ -169,7 +124,48 @@ const CheckInPage = () => {
           setBeds(cachedData)
           Taro.showToast({ title: '使用离线数据', icon: 'none' })
         } else {
-          Taro.showToast({ title: '数据加载失败', icon: 'none' })
+          Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+          setBeds([])
+        }
+        return
+      }
+
+      if (res.data?.code === 200 && res.data?.data) {
+        // 转换字段名：蛇形命名 -> 驼峰命名
+        const formattedBeds = res.data.data.map((bed: any) => ({
+          id: bed.id,
+          floor: bed.floor,
+          bedNumber: bed.bed_number,
+          position: bed.position,
+          status: bed.status,
+          room: bed.room,
+          dormitory: bed.dormitory,
+          checkIn: bed.checkIn ? {
+            id: bed.checkIn.id,
+            name: bed.checkIn.name,
+            idCard: bed.checkIn.id_card,
+            phone: bed.checkIn.phone,
+            checkInTime: bed.checkIn.check_in_time,
+            isStationMarked: bed.checkIn.is_station_marked ?? false,
+            isRider: bed.checkIn.is_rider ?? false,
+            isFlagged: bed.checkIn.is_flagged ?? false,
+            stationName: bed.checkIn.station_name ?? null,
+          } : undefined
+        }))
+        console.log(`[CheckIn] 格式化后的床位数据: ${formattedBeds.length} 条`)
+        setBeds(formattedBeds)
+        // 保存到本地缓存
+        Taro.setStorageSync(cacheKey, formattedBeds)
+        console.log('[CheckIn] 数据已缓存到本地:', cacheKey)
+      } else {
+        console.error('[CheckIn] 响应数据格式错误:', res.data)
+        // 尝试从本地缓存加载
+        const cachedData = Taro.getStorageSync(cacheKey)
+        if (cachedData && cachedData.length > 0) {
+          console.log('[CheckIn] 使用本地缓存数据')
+          setBeds(cachedData)
+        } else {
+          Taro.showToast({ title: res.data?.msg || '数据加载失败', icon: 'none' })
           setBeds([])
         }
       }

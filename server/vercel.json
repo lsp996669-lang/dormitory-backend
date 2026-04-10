@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "outputDirectory": "out",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/index"
+      "destination": "/api"
     }
   ]
 }
