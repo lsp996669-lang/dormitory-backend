@@ -33,18 +33,17 @@ async function bootstrap() {
 
   // 2. 解析端口
   const port = parsePort();
-  const host = process.env.HOST || '0.0.0.0'; // 微信云托管需要监听 0.0.0.0
   try {
-    await app.listen(port, host);
-    console.log(`Server running on http://${host}:${port}`);
+    await app.listen(port);
+    console.log(`Server running on http://localhost:${port}`);
   } catch (err) {
     if (err.code === 'EADDRINUSE') {
-      console.error(`❌ 端口 ${port} 被占用! 请运行 'npx kill-port ${port}' 然后重试。`);
+      console.error(`❌ 端口 \({port} 被占用! 请运行 'npx kill-port \){port}' 然后重试。`);
       process.exit(1);
     } else {
       throw err;
     }
   }
-  console.log(`Application is running on: http://localhost:${port}`);
+  console.log(`Application is running on: http://localhost:3000`);
 }
 bootstrap();
