@@ -152,7 +152,7 @@ export class BedsService implements OnModuleInit {
     const bedIds = beds.map(b => b.id);
     const { data: checkIns, error: checkInError } = await client
       .from('check_ins')
-      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name, is_flagged')
+      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
       .in('bed_id', bedIds);
 
     if (checkInError) {
@@ -386,7 +386,7 @@ export class BedsService implements OnModuleInit {
     const bedIds = beds.map(b => b.id);
     const { data: checkIns } = await client
       .from('check_ins')
-      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name, is_flagged')
+      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
       .in('bed_id', bedIds);
 
     // 组装数据
@@ -494,7 +494,7 @@ export class BedsService implements OnModuleInit {
     const bedIds = allBeds?.map(b => b.id) || [];
     const { data: checkIns } = await client
       .from('check_ins')
-      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name, is_flagged')
+      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
       .in('bed_id', bedIds);
 
     // 组装数据
