@@ -115,7 +115,7 @@ const ImportPage = () => {
             <Button
               className="w-full bg-gray-400 text-gray-600"
               onClick={handleImportFromUrl}
-              disabled={true}
+              disabled
             >
               <View className="flex items-center justify-center gap-2">
                 <Upload size={16} color="#fff" />
