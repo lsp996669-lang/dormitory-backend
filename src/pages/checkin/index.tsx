@@ -398,7 +398,7 @@ const CheckInPage = () => {
                             <View
                               className={`rounded-lg p-2 cursor-pointer transition-all ${
                                 upperBed?.status === 'occupied'
-                                  ? 'bg-green-50 border border-green-200 shadow-sm'
+                                  ? `bg-green-50 border ${upperBed.checkIn?.isFlagged ? 'border-red-500 border-2' : 'border-green-200'} shadow-sm`
                                   : upperBed?.status === 'maintenance'
                                   ? 'bg-orange-50 border border-orange-200 shadow-sm'
                                   : 'bg-white border border-gray-200'
@@ -455,7 +455,7 @@ const CheckInPage = () => {
                             <View
                               className={`rounded-lg p-2 cursor-pointer transition-all ${
                                 lowerBed?.status === 'occupied'
-                                  ? 'bg-green-50 border border-green-200 shadow-sm'
+                                  ? `bg-green-50 border ${lowerBed.checkIn?.isFlagged ? 'border-red-500 border-2' : 'border-green-200'} shadow-sm`
                                   : lowerBed?.status === 'maintenance'
                                   ? 'bg-orange-50 border border-orange-200 shadow-sm'
                                   : 'bg-white border border-gray-200'
@@ -488,7 +488,10 @@ const CheckInPage = () => {
                               {lowerBed?.status === 'occupied' && lowerBed.checkIn && (
                                 <View className="mt-1">
                                   <View className="flex items-center gap-2 flex-wrap">
-                                    <Text className="text-xs text-blue-600 font-semibold">{lowerBed.checkIn.name}</Text>
+                                    <Text className={`text-xs font-semibold ${lowerBed.checkIn.isFlagged ? 'text-red-600' : 'text-blue-600'}`}>{lowerBed.checkIn.name}</Text>
+                                    {lowerBed.checkIn.isFlagged && (
+                                      <Badge className="bg-red-500 text-white text-xs">!</Badge>
+                                    )}
                                     {/* 站点标注标签 */}
                                     {lowerBed.checkIn.stationName && (
                                       <Badge className={`text-xs ${lowerBed.checkIn.stationName === 'rider' ? 'bg-green-500' : 'bg-blue-500'} text-white`}>
@@ -533,7 +536,7 @@ const CheckInPage = () => {
                     <View
                       className={`rounded p-2 cursor-pointer ${
                         upperBed?.status === 'occupied'
-                          ? 'bg-gradient-to-br from-green-50 to-green-100 border border-green-200 shadow-sm'
+                          ? `bg-gradient-to-br from-green-50 to-green-100 border ${upperBed.checkIn?.isFlagged ? 'border-red-500 border-2' : 'border-green-200'} shadow-sm`
                           : upperBed?.status === 'maintenance'
                           ? 'bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 shadow-sm'
                           : 'bg-gray-50 border border-gray-200'
@@ -590,7 +593,7 @@ const CheckInPage = () => {
                     <View
                       className={`rounded cursor-pointer p-3 ${
                         lowerBed?.status === 'occupied'
-                          ? 'bg-gradient-to-br from-green-50 to-green-100 border border-green-200 shadow-sm'
+                          ? `bg-gradient-to-br from-green-50 to-green-100 border ${lowerBed.checkIn?.isFlagged ? 'border-red-500 border-2' : 'border-green-200'} shadow-sm`
                           : lowerBed?.status === 'maintenance'
                           ? 'bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 shadow-sm'
                           : 'bg-gray-50 border border-gray-200'
