@@ -1,0 +1,13 @@
+{
+  "version": "2.0",
+  "routes": [
+    {
+      "path": "/(.*)",
+      "target": "/$1"
+    }
+  ],
+  "envVariables": {
+    "NODE_ENV": "production",
+    "PORT": "3000"
+  }
+}
