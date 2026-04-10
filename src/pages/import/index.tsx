@@ -17,58 +17,14 @@ const ImportPage = () => {
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
 
-  // 从URL导入默认文件
+  // 从URL导入默认文件（已禁用 - 生产环境不支持临时URL）
   const handleImportFromUrl = async () => {
-    const confirmed = await Taro.showModal({
-      title: '确认导入',
-      content: '确定要从Excel文件导入数据吗？\n\n这将清空现有数据并导入新数据。',
+    Taro.showModal({
+      title: '功能已禁用',
+      content: '默认文件导入功能已禁用。\n\n请使用"上传Excel文件"功能，选择您的本地Excel文件进行导入。',
+      showCancel: false
     })
-    
-    if (!confirmed.confirm) return
-
-    setImporting(true)
-    setResult(null)
-
-    try {
-      // 默认的Excel文件URL
-      const fileUrl = 'https://code.coze.cn/api/sandbox/coze_coding/file/proxy?expire_time=-1&file_path=assets%2F2_%E5%8D%97%E5%9B%9B%E5%B7%B7%E4%BD%8F%E5%AE%BF%E4%BA%BA%E5%91%98%E5%90%8D%E5%8D%953%E6%9C%8821%E5%8F%B7%283%29.xlsx&nonce=d6f3ab6e-615c-4637-8882-040fabe8902f&project_id=7619391393189953536&sign=d6f2de406cca8bba1b6f4870fdefd2b488015cbdae5f97372e2d36418b2bde9b'
-
-      Taro.showLoading({ title: '正在导入...', mask: true })
-
-      const res = await Network.request({
-        url: '/api/import/url',
-        method: 'POST',
-        data: { url: fileUrl }
-      })
-
-      Taro.hideLoading()
-
-      console.log('[Import] 导入结果:', res.data)
-
-      if (res.data?.code === 200 && res.data?.data) {
-        setResult(res.data.data)
-        
-        if (res.data.data.checkIns > 0 || res.data.data.checkOuts > 0) {
-          Taro.showToast({
-            title: `入住${res.data.data.checkIns}人，搬离${res.data.data.checkOuts}人`,
-            icon: 'success',
-            duration: 3000
-          })
-        }
-      } else {
-        throw new Error(res.data?.msg || '导入失败')
-      }
-    } catch (error: any) {
-      Taro.hideLoading()
-      console.error('[Import] 导入失败:', error)
-      Taro.showToast({
-        title: error.message || '导入失败',
-        icon: 'none',
-        duration: 3000
-      })
-    } finally {
-      setImporting(false)
-    }
+    return
   }
 
   // 上传Excel文件导入
@@ -144,28 +100,26 @@ const ImportPage = () => {
 
       {/* 导入方式卡片 */}
       <View className="space-y-3">
-        {/* 默认文件导入 */}
-        <Card className="overflow-hidden">
+        {/* 默认文件导入（已禁用） */}
+        <Card className="overflow-hidden opacity-60">
           <CardContent className="p-4">
             <View className="flex items-center gap-3 mb-3">
-              <View className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <FileSpreadsheet size={20} color="#2563eb" />
+              <View className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                <FileSpreadsheet size={20} color="#9ca3af" />
               </View>
               <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-800">南四巷住宿名单</Text>
-                <Text className="text-xs text-gray-500">导入预设Excel文件数据</Text>
+                <Text className="text-sm font-medium text-gray-600">默认文件导入</Text>
+                <Text className="text-xs text-gray-400">生产环境已禁用</Text>
               </View>
             </View>
             <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-gray-400 text-gray-600"
               onClick={handleImportFromUrl}
-              disabled={importing}
+              disabled={true}
             >
               <View className="flex items-center justify-center gap-2">
                 <Upload size={16} color="#fff" />
-                <Text className="text-white">
-                  {importing ? '导入中...' : '导入数据'}
-                </Text>
+                <Text className="text-white">已禁用</Text>
               </View>
             </Button>
           </CardContent>
