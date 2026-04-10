@@ -41,6 +41,7 @@ interface RollCallItem {
   status: 'present' | 'absent' | null
   remark: string | null
   rollCallTime: string | null
+  dormitory?: string
 }
 
 interface RollCallStats {
@@ -54,8 +55,9 @@ interface RollCallStats {
 
 const RollCallPage = () => {
   const router = useRouter()
-  const { floor: floorParam } = router.params
+  const { floor: floorParam, dormitory: dormitoryParam } = router.params
   const floor = parseInt(floorParam || '2', 10)
+  const dormitory = dormitoryParam || undefined
 
   const [rollCallList, setRollCallList] = useState<RollCallItem[]>([])
   const [stats, setStats] = useState<RollCallStats | null>(null)
@@ -68,18 +70,30 @@ const RollCallPage = () => {
 
   useEffect(() => {
     loadRollCallData()
-  }, [floor, selectedDate])
+  }, [floor, dormitory, selectedDate])
 
   const loadRollCallData = async () => {
     setLoading(true)
     try {
+      // 构建查询参数
+      const listParams: { floor: number; date?: string; dormitory?: string } = { floor, date: selectedDate }
+      const statsParams: { floor: number; date?: string; dormitory?: string } = { floor, date: selectedDate }
+
+      // 如果指定了宿舍，添加到参数中
+      if (dormitory) {
+        listParams.dormitory = dormitory
+        statsParams.dormitory = dormitory
+      }
+
       // 并行加载列表和统计
       const [listRes, statsRes] = await Promise.all([
         Network.request({
-          url: `/api/rollcall/list?floor=${floor}&date=${selectedDate}`
+          url: '/api/rollcall/list',
+          data: listParams
         }),
         Network.request({
-          url: `/api/rollcall/stats?floor=${floor}&date=${selectedDate}`
+          url: '/api/rollcall/stats',
+          data: statsParams
         })
       ])
 
@@ -237,7 +251,9 @@ const RollCallPage = () => {
       <View className="bg-white px-4 py-3 border-b border-gray-200">
         <View className="flex items-center justify-between">
           <View>
-            <Text className="text-lg font-semibold text-gray-800">{floor}楼 - 点名</Text>
+            <Text className="text-lg font-semibold text-gray-800">
+              {dormitory === 'nanTwo' ? '南二巷' : '南四巷'} {floor}楼 - 点名
+            </Text>
             <Text className="text-xs text-gray-500 block mt-1">
               {selectedDate}
             </Text>

@@ -7,18 +7,19 @@ export class RollCallController {
 
   /**
    * 获取点名列表
-   * GET /api/rollcall/list?floor=2&date=2024-01-01
+   * GET /api/rollcall/list?floor=2&dormitory=nansi&date=2024-01-01
    */
   @Get('list')
   async getRollCallList(
     @Query('floor') floor: string,
+    @Query('dormitory') dormitory?: string,
     @Query('date') date?: string
   ) {
     const floorNum = parseInt(floor, 10);
     if (isNaN(floorNum)) {
       return { code: 400, msg: '楼层参数无效' };
     }
-    return this.rollCallService.getRollCallList(floorNum, date);
+    return this.rollCallService.getRollCallList(floorNum, dormitory, date);
   }
 
   /**
@@ -77,18 +78,19 @@ export class RollCallController {
 
   /**
    * 获取点名统计
-   * GET /api/rollcall/stats?floor=2&date=2024-01-01
+   * GET /api/rollcall/stats?floor=2&dormitory=nansi&date=2024-01-01
    */
   @Get('stats')
   async getRollCallStats(
     @Query('floor') floor: string,
+    @Query('dormitory') dormitory?: string,
     @Query('date') date?: string
   ) {
     const floorNum = parseInt(floor, 10);
     if (isNaN(floorNum)) {
       return { code: 400, msg: '楼层参数无效' };
     }
-    return this.rollCallService.getRollCallStats(floorNum, date);
+    return this.rollCallService.getRollCallStats(floorNum, dormitory, date);
   }
 
   /**

@@ -4,17 +4,24 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 @Injectable()
 export class RollCallService {
   /**
-   * 获取点名列表（获取某楼层的入住人员列表，附带点名状态）
+   * 获取点名列表（获取某楼层、某宿舍的入住人员列表，附带点名状态）
    */
-  async getRollCallList(floor: number, date?: string) {
+  async getRollCallList(floor: number, dormitory?: string, date?: string) {
     const client = getSupabaseClient();
 
-    // 获取该楼层的所有床位
-    const { data: beds, error: bedsError } = await client
+    // 构建查询条件
+    const bedQuery = client
       .from('beds')
-      .select('id, bed_number, position')
+      .select('id, bed_number, position, dormitory')
       .eq('floor', floor)
       .eq('status', 'occupied');
+
+    // 如果指定了宿舍，添加过滤条件
+    if (dormitory) {
+      bedQuery.eq('dormitory', dormitory);
+    }
+
+    const { data: beds, error: bedsError } = await bedQuery;
 
     if (bedsError) {
       console.error('获取床位失败:', bedsError);
@@ -68,6 +75,7 @@ export class RollCallService {
         bedId: checkIn.bed_id,
         bedNumber: bed?.bed_number,
         position: bed?.position,
+        dormitory: bed?.dormitory,
         name: checkIn.name,
         idCard: checkIn.id_card,
         phone: checkIn.phone,
@@ -275,19 +283,26 @@ export class RollCallService {
   /**
    * 获取点名统计
    */
-  async getRollCallStats(floor: number, date?: string) {
+  async getRollCallStats(floor: number, dormitory?: string, date?: string) {
     const client = getSupabaseClient();
 
     const targetDate = date || new Date().toISOString().split('T')[0];
     const dayStart = `${targetDate}T00:00:00+08:00`;
     const dayEnd = `${targetDate}T23:59:59+08:00`;
 
-    // 获取该楼层的入住人数
-    const { data: beds, error: bedsError } = await client
+    // 构建查询条件
+    const bedQuery = client
       .from('beds')
       .select('id')
       .eq('floor', floor)
       .eq('status', 'occupied');
+
+    // 如果指定了宿舍，添加过滤条件
+    if (dormitory) {
+      bedQuery.eq('dormitory', dormitory);
+    }
+
+    const { data: beds, error: bedsError } = await bedQuery;
 
     if (bedsError) {
       console.error('获取床位失败:', bedsError);
