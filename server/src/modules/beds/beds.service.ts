@@ -397,6 +397,7 @@ export class BedsService implements OnModuleInit {
 
     // 获取入住记录 - 使用关联查询避免 .in() 超限
     let checkIns: any[] = [];
+    const bedIds = beds.map(b => b.id);
     if (bedIds.length > 0) {
       // Supabase 的 .in() 查询最多支持 2000 个值，分批查询
       const batchSize = 500;
