@@ -362,7 +362,20 @@ export class BedsService implements OnModuleInit {
       const { error: insertError } = await client.from('beds').insert(newBeds);
       if (insertError) {
         console.error('[BedsService] 初始化房间床位失败:', insertError);
-        throw new Error('初始化床位失败');
+        // 尝试分批插入
+        const insertBatchSize = 50;
+        let insertedCount = 0;
+        for (let i = 0; i < newBeds.length; i += insertBatchSize) {
+          const batch = newBeds.slice(i, i + insertBatchSize);
+          const { error: batchError } = await client.from('beds').insert(batch);
+          if (batchError) {
+            console.error('[BedsService] 批量插入失败:', batchError);
+            throw new Error('初始化床位失败');
+          }
+          insertedCount += batch.length;
+          console.log(`[BedsService] 已插入 ${insertedCount}/${newBeds.length} 个床位`);
+        }
+        console.log('[BedsService] 分批插入成功');
       }
 
       // 重新查询
@@ -382,12 +395,23 @@ export class BedsService implements OnModuleInit {
       };
     }
 
-    // 获取入住记录
-    const bedIds = beds.map(b => b.id);
-    const { data: checkIns } = await client
-      .from('check_ins')
-      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
-      .in('bed_id', bedIds);
+    // 获取入住记录 - 使用关联查询避免 .in() 超限
+    let checkIns: any[] = [];
+    if (bedIds.length > 0) {
+      // Supabase 的 .in() 查询最多支持 2000 个值，分批查询
+      const batchSize = 500;
+      for (let i = 0; i < bedIds.length; i += batchSize) {
+        const batch = bedIds.slice(i, i + batchSize);
+        const { data: batchCheckIns } = await client
+          .from('check_ins')
+          .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
+          .in('bed_id', batch);
+
+        if (batchCheckIns) {
+          checkIns.push(...batchCheckIns);
+        }
+      }
+    }
 
     // 组装数据
     const bedsData = beds.map(bed => {
@@ -469,10 +493,20 @@ export class BedsService implements OnModuleInit {
         }
       }
 
-      const { error: insertError } = await client.from('beds').insert(newBeds);
-      if (insertError) {
-        console.error('[BedsService] 初始化楼层床位失败:', insertError);
+      // 分批插入床位，避免一次性插入太多数据
+      const insertBatchSize = 50;
+      let insertedCount = 0;
+      for (let i = 0; i < newBeds.length; i += insertBatchSize) {
+        const batch = newBeds.slice(i, i + insertBatchSize);
+        const { error: batchError } = await client.from('beds').insert(batch);
+        if (batchError) {
+          console.error('[BedsService] 批量插入失败:', batchError);
+          throw new Error('初始化楼层床位失败');
+        }
+        insertedCount += batch.length;
+        console.log(`[BedsService] 已插入 ${insertedCount}/${newBeds.length} 个床位`);
       }
+      console.log('[BedsService] 楼层床位初始化完成');
     }
 
     // 重新查询所有床位
@@ -490,12 +524,24 @@ export class BedsService implements OnModuleInit {
       throw new Error('获取床位失败');
     }
 
-    // 获取入住记录
+    // 获取入住记录 - 使用关联查询避免 .in() 超限
+    let checkIns: any[] = [];
     const bedIds = allBeds?.map(b => b.id) || [];
-    const { data: checkIns } = await client
-      .from('check_ins')
-      .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
-      .in('bed_id', bedIds);
+    if (bedIds.length > 0) {
+      // Supabase 的 .in() 查询最多支持 2000 个值，分批查询
+      const batchSize = 500;
+      for (let i = 0; i < bedIds.length; i += batchSize) {
+        const batch = bedIds.slice(i, i + batchSize);
+        const { data: batchCheckIns } = await client
+          .from('check_ins')
+          .select('id, bed_id, name, id_card, phone, check_in_time, is_station_marked, is_rider, station_name')
+          .in('bed_id', batch);
+
+        if (batchCheckIns) {
+          checkIns.push(...batchCheckIns);
+        }
+      }
+    }
 
     // 组装数据
     const bedsData = allBeds?.map(bed => {

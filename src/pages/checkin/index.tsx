@@ -94,7 +94,7 @@ const CheckInPage = () => {
     try {
       let url = '/api/beds/floor/' + floor
       let cacheKey = `beds_floor_${floor}`
-      
+
       // 南二巷宿舍使用不同的API
       if (isNanTwo) {
         if (room) {
@@ -108,8 +108,16 @@ const CheckInPage = () => {
       }
 
       console.log(`[CheckIn] 开始加载床位数据，URL: ${url}`)
-      
-      const res = await Network.request({ url })
+
+      // 添加超时控制（15秒）
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), 15000)
+      })
+
+      const res = await Promise.race([
+        Network.request({ url }),
+        timeoutPromise
+      ]) as any
 
       console.log('[CheckIn] 床位数据响应:', res)
       console.log('[CheckIn] 响应状态码:', res.statusCode)
@@ -124,7 +132,8 @@ const CheckInPage = () => {
           setBeds(cachedData)
           Taro.showToast({ title: '使用离线数据', icon: 'none' })
         } else {
-          Taro.showToast({ title: `请求失败: ${res.statusCode}`, icon: 'none' })
+          const errorMsg = res.statusCode === 408 ? '请求超时' : `请求失败: ${res.statusCode}`
+          Taro.showToast({ title: errorMsg, icon: 'none', duration: 3000 })
           setBeds([])
         }
         return
@@ -171,15 +180,35 @@ const CheckInPage = () => {
       }
     } catch (error) {
       console.error('[CheckIn] 加载床位失败:', error)
+
       // 尝试从本地缓存加载
       const cacheKey = isNanTwo && room ? `beds_nantwo_${floor}_${room}` : `beds_floor_${floor}`
       const cachedData = Taro.getStorageSync(cacheKey)
+
       if (cachedData && cachedData.length > 0) {
         console.log('[CheckIn] 网络错误，使用本地缓存数据')
         setBeds(cachedData)
-        Taro.showToast({ title: '网络不可用，显示离线数据', icon: 'none', duration: 3000 })
+
+        // 根据错误类型显示不同的提示
+        let errorMsg = '网络不可用，显示离线数据'
+        if (error instanceof Error) {
+          if (error.message === '请求超时') {
+            errorMsg = '请求超时，显示离线数据'
+          } else if (error.message.includes('network')) {
+            errorMsg = '网络连接失败，显示离线数据'
+          }
+        }
+        Taro.showToast({ title: errorMsg, icon: 'none', duration: 3000 })
       } else {
-        Taro.showToast({ title: '网络请求失败，请检查网络连接', icon: 'none', duration: 3000 })
+        let errorMsg = '网络请求失败，请检查网络连接'
+        if (error instanceof Error) {
+          if (error.message === '请求超时') {
+            errorMsg = '请求超时，请稍后重试'
+          } else if (error.message.includes('network')) {
+            errorMsg = '网络连接失败，请检查网络设置'
+          }
+        }
+        Taro.showToast({ title: errorMsg, icon: 'none', duration: 3000 })
         setBeds([])
       }
     } finally {
